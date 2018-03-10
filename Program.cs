@@ -21,19 +21,19 @@ namespace SimMach
                 {"lb.eu-west:nginx", RunNginx},
                 {"lb.eu-west:telegraf", RunTelegraf}
             };
+            var runtime = new Runtime(t);
 
-
-            var machines = t.GroupBy(p => p.Key.Split(':')[0]);
+            var machines = runtime.Services.GroupBy(p => p.Key.Machine);
             // printing
             foreach (var m in machines) {
                 Console.WriteLine($"{m.Key}");
 
                 foreach (var svc in m) {
-                    Console.WriteLine($"  {svc.Key.Split(':')[1]}");
+                    Console.WriteLine($"  {svc.Key.Service}");
                 }
             }
             
-            var runtime = new Runtime(t);
+            //runtime.Services.First().Value.
             
             runtime.Start();
 
@@ -41,9 +41,11 @@ namespace SimMach
             Console.ReadLine();
 
             Console.WriteLine("Shutting down...");
-            runtime.ShutDown(1000).Wait();
+            
+            runtime.ShutDown(p => p.Machine == "lb.eu-west").Wait();
             Console.WriteLine("Done. Starting");
-            runtime.Start();
+            runtime.Start(p => p.Machine == "lb.eu-west"
+                               );
             Console.WriteLine("Booted");
             
 
@@ -77,7 +79,12 @@ namespace SimMach
         }
     }
 
-    class Topology : Dictionary<string,Func<Sim,Task>> { }
+    class Topology : Dictionary<ServiceName, Func<Sim, Task>> {
+        public Topology() : base(new ServiceNameComparer()) { }
+    }
+
+
+    
 
 
     
