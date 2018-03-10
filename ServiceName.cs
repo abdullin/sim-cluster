@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace SimMach {
     class ServiceName {
@@ -6,23 +7,26 @@ namespace SimMach {
         public readonly string Full;
         public readonly string Machine;
         public readonly string Service;
+        public readonly string Zone;
+        
 
-        public ServiceName(string full, string machine, string service) {
-            Full = full;
-            Machine = machine;
-            Service = service;
-        }
-
-        public static ServiceName Parse(string input) {
-            var strings = input.Split(':');
-            var svc = strings[1];
-            var machine = strings[0];
+        public ServiceName(string input) {
+            Full = input;
             
-            return new ServiceName(input, machine, svc);
+            var strings = input.Split(':');
+            
+            Service = strings[1];
+            Machine = strings[0];
+            
+            var dparts = Machine.Split('.');
+
+
+            Zone = dparts.Last();
         }
+
         
         public static implicit operator ServiceName(string input) {
-            return Parse(input);
+            return new ServiceName(input);
         }
 
 

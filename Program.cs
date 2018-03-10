@@ -18,8 +18,10 @@ namespace SimMach
 
 
             var t = new Topology {
-                {"lb.eu-west:nginx", RunNginx},
-                {"lb.eu-west:telegraf", RunTelegraf}
+                {"lb0.eu-west:nginx", RunNginx},
+                {"lb0.eu-west:telegraf", RunTelegraf},
+                {"lb1.eu-west:nginx", RunNginx},
+                {"lb1.eu-west:telegraf", RunTelegraf}
             };
             var runtime = new Runtime(t);
 
@@ -42,10 +44,9 @@ namespace SimMach
 
             Console.WriteLine("Shutting down...");
             
-            runtime.ShutDown(p => p.Machine == "lb.eu-west").Wait();
+            runtime.ShutDown(p => p.Machine == "lb0.eu-west").Wait();
             Console.WriteLine("Done. Starting");
-            runtime.Start(p => p.Machine == "lb.eu-west"
-                               );
+            runtime.Start(p => p.Machine == "lb0.eu-west");
             Console.WriteLine("Booted");
             
 
