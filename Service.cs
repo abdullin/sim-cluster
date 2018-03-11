@@ -41,11 +41,10 @@ namespace SimMach {
             _sim.Cancel();
 
 
-            var finished = await Task.WhenAny(_task, _sim.Delay(grace));
+            var finished = await Task.WhenAny(_task, Future.Delay(grace));
             if (finished != _task) {
-                _sim.Debug("Shutdown timeout. Abandon timeline");
-                
-                _runtime.Future.EraseTimeline(_scheduler);
+                _sim.Debug("Shutdown timeout. ERASE FUTURE!");
+                _runtime.FuturePlan.Abandon(_scheduler);
                 _sim.Kill();
             }
 
@@ -103,7 +102,7 @@ namespace SimMach {
 
         protected override void QueueTask(Task task) {
             switch (task) {
-                case FutureTask ft:
+                case Future ft:
                     _sim.Schedule(this, ft.Ts, ft);
                     break;
                 default:
@@ -117,11 +116,21 @@ namespace SimMach {
         }
     }
 
-    sealed class FutureTask : Task {
+    sealed class Future : Task {
         public readonly TimeSpan Ts;
 
-        public FutureTask(TimeSpan ts) : base(() => { }) {
+        public Future(TimeSpan ts) : base(() => { }) {
             Ts = ts;
+        }
+        // TODO: should react to the service cancellation token
+        public static Task Delay(TimeSpan ts) {
+            var task = new Future(ts);
+            task.Start();
+            return task;
+        }
+        
+        public static Task Delay(int ms) {
+            return Delay(TimeSpan.FromMilliseconds(ms));
         }
     }
 }

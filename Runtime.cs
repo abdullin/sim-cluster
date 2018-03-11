@@ -29,7 +29,7 @@ namespace SimMach {
         
         
         
-        public readonly Future Future = new Future();
+        public readonly FuturePlan FuturePlan = new FuturePlan();
 
         // system schedulers
         readonly Scheduler _scheduler;
@@ -46,16 +46,12 @@ namespace SimMach {
         public void Schedule(Scheduler id, TimeSpan offset, object message) {
             _steps++;
             var pos = _time + offset.Ticks;
-            Future.Schedule(id, pos, message);
+            FuturePlan.Schedule(id, pos, message);
         }
 
-        public void Plan(TimeSpan offset, Action a) {
+        public void Plan(Func<Task> a) {
             
-            Schedule(_scheduler,TimeSpan.Zero, _factory.StartNew(() => {
-                var futureTask = new FutureTask(offset);
-                futureTask.Start();
-                futureTask.ContinueWith(_ => a());
-            }));
+            Schedule(_scheduler,TimeSpan.Zero, _factory.StartNew(a));
         }
 
 
@@ -85,18 +81,13 @@ namespace SimMach {
             }
         }
 
+        Exception _halt;
+
         public void Run() {
             var token = CancellationToken.None;
 
-            Exception halt = null;
-            foreach (var svc in Filter(id => true)) {
-                svc.Launch(task => {
-                    Console.WriteLine("Service died");
-                    if (task.Exception != null) {
-                        halt = task.Exception.InnerException;
-                    }
-                });
-            }
+            _halt = null;
+            
             
             var watch = Stopwatch.StartNew();
             var reason = "none";
@@ -108,7 +99,7 @@ namespace SimMach {
                     step++;
                  
 
-                    var hasFuture = Future.TryGetFuture(out var o);
+                    var hasFuture = FuturePlan.TryGetFuture(out var o);
                     if (!hasFuture) {
                         reason = "died";
                         break;
@@ -134,7 +125,7 @@ namespace SimMach {
                             throw new InvalidOperationException();
                     }
 
-                    if (halt != null) {
+                    if (_halt != null) {
                         reason = "halt";
                         break;
                     }
@@ -145,13 +136,13 @@ namespace SimMach {
                     }
 
                     if (_time >= MaxTime) {
-                        reason = "timeout";
+                        reason = "time";
                         break;
                     }
                 }
             } catch (Exception ex) {
                 reason = "fatal";
-                halt = ex;
+                _halt = ex;
                 Console.WriteLine("Fatal: " + ex);
             }
             
@@ -163,8 +154,8 @@ namespace SimMach {
             Console.WriteLine("Simulation parameters:");
             
 
-            if (halt != null) {
-                Console.WriteLine(halt.Demystify());
+            if (_halt != null) {
+                Console.WriteLine(_halt.Demystify());
             }
 
             Console.WriteLine($"Simulated {softTime.TotalHours:F1} hours in {_steps} steps.");
@@ -179,6 +170,17 @@ namespace SimMach {
             }
         }*/
 
+        public void Start(Predicate<ServiceId> selector = null) {
+            foreach (var svc in Filter(selector)) {
+                svc.Launch(task => {
+                    if (task.Exception != null) {
+                        _halt = task.Exception.InnerException;
+                        return;
+                    }
+                });
+            }
+        }
+        
         public Task ShutDown(Predicate<ServiceId> selector = null, int grace = 1000) {
             
             var tasks = Filter(selector).Select(p => p.Stop(grace)).ToArray();
@@ -209,16 +211,7 @@ namespace SimMach {
             _failures = new long[Enum.GetValues(typeof(Effect)).Length];
         }
 
-        public Task Delay(TimeSpan ts) {
-            var task = new FutureTask(ts);
-            task.Start();
-            return task;
-        }
-
-        public Task Delay(int ms) {
-            return Delay(TimeSpan.FromMilliseconds(ms));
-        }
-
+     
 
         public void Plan(Effect effect, long till) {
             _failures[(byte) effect] = till;
@@ -248,7 +241,7 @@ namespace SimMach {
         }*/
         
         public void Debug(string l) {
-            Runtime.Debug($" {Id.Machine,-11} {Id.Service,-20} {l}");
+            Runtime.Debug($"  {Id.Machine,-13} {Id.Service,-20} {l}");
         }
         /*public void Debug(string message) {
             if (_killed) {

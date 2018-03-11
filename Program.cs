@@ -40,14 +40,25 @@ namespace SimMach
             
             
             
-            runtime.Plan(TimeSpan.FromSeconds(2), async () => {
-                runtime.Debug("Shutting 'lb1.eu-west' down");
-                await runtime.ShutDown(s => s.Machine == "lb1.eu-west");
-                runtime.Debug("Shutdown complete");
+            runtime.Plan(async () => {
+                runtime.Start();
+                await Future.Delay(2000);
+                
+                
+                const string machine = "lb1.eu-west";
+                
+                runtime.Debug($"Shutting '{machine}' down");
+                await runtime.ShutDown(s => s.Machine == machine, 2000);
+                
+                runtime.Debug($"{machine} is down. Booting");
+                await Future.Delay(2000);
+                
+                runtime.Start(s => s.Machine == machine);
+                runtime.Debug($"{machine} is up and running");
+
             });
             
-            //runtime.Services.First().Value.
-            
+            // blocking call
             runtime.Run();
 
             Console.WriteLine("Done");
@@ -61,7 +72,7 @@ namespace SimMach
             try {
                 while (!env.Token.IsCancellationRequested) {
                     //env.Debug("Running");
-                    await env.Delay(1000);
+                    await Future.Delay(1000);
                 }
             } catch (TaskCanceledException) { }
 
@@ -73,7 +84,7 @@ namespace SimMach
             try {
                 while (!env.Token.IsCancellationRequested) {
                     //env.Debug("Running");
-                    await env.Delay(5000);
+                    await Future.Delay(5000);
                 }
             } catch (TaskCanceledException) { }
 

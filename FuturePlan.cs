@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace SimMach {
-    class Future {
+    class FuturePlan {
         readonly SortedList<long, List<(Scheduler, object)>>
             _future = new SortedList<long, List<(Scheduler, object)>>();
 
@@ -18,7 +18,7 @@ namespace SimMach {
             list.Add((id, message));
         }
 
-        public void EraseTimeline(Scheduler id) {
+        public void Abandon(Scheduler id) {
             foreach (var pairs in _future.Values) {
                 pairs.RemoveAll(tuple => tuple.Item1 == id);
             }
