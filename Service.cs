@@ -40,11 +40,10 @@ namespace SimMach {
 
             _sim.Cancel();
 
-
             var finished = await Task.WhenAny(_task, Future.Delay(grace));
             if (finished != _task) {
-                _sim.Debug("Shutdown timeout. ERASE FUTURE!");
-                _runtime.FuturePlan.Abandon(_scheduler);
+                _sim.Debug("Shutdown timeout. ERASING FUTURE to KILL");
+                _runtime.FuturePlan.Erase(_scheduler);
                 _sim.Kill();
             }
 

@@ -42,28 +42,19 @@ namespace SimMach
             
             runtime.Plan(async () => {
                 runtime.Start();
-                await Future.Delay(2000);
+                await Future.Delay(1000);
                 
+                runtime.Debug($"Power off 'lb1.eu-west' in 2000 ms");
+                await runtime.ShutDown(s => s.Machine == "lb1.eu-west", 2000);
                 
-                const string machine = "lb1.eu-west";
+                runtime.Debug($"'lb1.eu-west' is down. Booting");
+                await Future.Delay(3000);
                 
-                runtime.Debug($"Shutting '{machine}' down");
-                await runtime.ShutDown(s => s.Machine == machine, 2000);
-                
-                runtime.Debug($"{machine} is down. Booting");
-                await Future.Delay(2000);
-                
-                runtime.Start(s => s.Machine == machine);
-                runtime.Debug($"{machine} is up and running");
-
+                runtime.Start(s => s.Machine == "lb1.eu-west");
+                runtime.Debug($"'lb1.eu-west' is up and running");
             });
             
-            // blocking call
             runtime.Run();
-
-            Console.WriteLine("Done");
-
-            // at the time of the configuration, simulation doesn't exist, yet!
         }
 
         static async Task RunTelegraf(Sim env) {

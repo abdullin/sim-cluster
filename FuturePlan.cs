@@ -18,7 +18,7 @@ namespace SimMach {
             list.Add((id, message));
         }
 
-        public void Abandon(Scheduler id) {
+        public void Erase(Scheduler id) {
             foreach (var pairs in _future.Values) {
                 pairs.RemoveAll(tuple => tuple.Item1 == id);
             }

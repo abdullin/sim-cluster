@@ -91,7 +91,7 @@ namespace SimMach {
             
             var watch = Stopwatch.StartNew();
             var reason = "none";
-            
+            Debug($"{"start".ToUpper()}");
             
             try {
                 var step = 0;
@@ -136,7 +136,7 @@ namespace SimMach {
                     }
 
                     if (_time >= MaxTime) {
-                        reason = "time";
+                        reason = "end";
                         break;
                     }
                 }
@@ -182,7 +182,6 @@ namespace SimMach {
         }
         
         public Task ShutDown(Predicate<ServiceId> selector = null, int grace = 1000) {
-            
             var tasks = Filter(selector).Select(p => p.Stop(grace)).ToArray();
             return Task.WhenAll(tasks);
         }
