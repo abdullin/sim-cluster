@@ -14,25 +14,48 @@ namespace SimMach {
         public readonly Dictionary<ServiceId, Service> Services;
         
         
-        readonly Stopwatch _watch = Stopwatch.StartNew();
-        public TimeSpan Time => _watch.Elapsed;
-        public long Ticks => _watch.ElapsedTicks;
+        
+        public TimeSpan Time => TimeSpan.FromTicks(_time);
+        public long Ticks => _time;
+        
+        public TimeSpan Timeout {
+            set { MaxTime = value.Ticks; }
+        }
 
         long _steps;
         long _time;
 
-        readonly Future _future = new Future();
+        public long MaxTime = long.MaxValue;
         
+        
+        
+        public readonly Future Future = new Future();
+
+        // system schedulers
+        readonly Scheduler _scheduler;
+        readonly TaskFactory _factory;
 
         public Runtime(Topology topology) {
             Services = topology.ToDictionary(p => p.Key, p => new Service(this, p.Key, p.Value));
+            
+            _scheduler = new Scheduler(this,new ServiceId("simulation:proc"));
+            _factory = new TaskFactory(_scheduler);
         }
         
         
         public void Schedule(Scheduler id, TimeSpan offset, object message) {
             _steps++;
             var pos = _time + offset.Ticks;
-            _future.Schedule(id, pos, message);
+            Future.Schedule(id, pos, message);
+        }
+
+        public void Plan(TimeSpan offset, Action a) {
+            
+            Schedule(_scheduler,TimeSpan.Zero, _factory.StartNew(() => {
+                var futureTask = new FutureTask(offset);
+                futureTask.Start();
+                futureTask.ContinueWith(_ => a());
+            }));
         }
 
 
@@ -49,7 +72,6 @@ namespace SimMach {
         
         
         long _lastActivity;
-
         readonly long _terminateIfNoActivityFor = TimeSpan.FromSeconds(5).Ticks;
 
         
@@ -86,7 +108,7 @@ namespace SimMach {
                     step++;
                  
 
-                    var hasFuture = _future.TryGetFuture(out var o);
+                    var hasFuture = Future.TryGetFuture(out var o);
                     if (!hasFuture) {
                         reason = "died";
                         break;
@@ -117,8 +139,13 @@ namespace SimMach {
                         break;
                     }
 
-                    if ((_time - _lastActivity) > _terminateIfNoActivityFor) {
+                    if ((_time - _lastActivity) >= _terminateIfNoActivityFor) {
                         reason = "no activity";
+                        break;
+                    }
+
+                    if (_time >= MaxTime) {
+                        reason = "timeout";
                         break;
                     }
                 }
@@ -132,9 +159,9 @@ namespace SimMach {
 
             var softTime = TimeSpan.FromTicks(_time);
             var factor = softTime.TotalHours / watch.Elapsed.TotalHours;
-
+            Debug($"Result: {reason.ToUpper()}");
             Console.WriteLine("Simulation parameters:");
-            Console.WriteLine($"Result: {reason.ToUpper()}");
+            
 
             if (halt != null) {
                 Console.WriteLine(halt.Demystify());
@@ -152,13 +179,11 @@ namespace SimMach {
             }
         }*/
 
-        /*public Task ShutDown(Predicate<ServiceId> selector = null, int grace = 1000) {
+        public Task ShutDown(Predicate<ServiceId> selector = null, int grace = 1000) {
+            Debug("Shutting down");
             var tasks = Filter(selector).Select(p => p.Stop(grace)).ToArray();
             return Task.WhenAll(tasks);
-        }*/
-        
-       
-       
+        }
     }
 
 

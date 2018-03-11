@@ -24,6 +24,8 @@ namespace SimMach
                 {"lb1.eu-west:telegraf", RunTelegraf}
             };
             var runtime = new Runtime(t);
+            runtime.Timeout = TimeSpan.FromSeconds(10);
+            
 
             var machines = runtime.Services.GroupBy(p => p.Key.Machine);
             // printing
@@ -34,6 +36,12 @@ namespace SimMach
                     Console.WriteLine($"  {svc.Key.Service}");
                 }
             }
+            
+            
+            
+            runtime.Plan(TimeSpan.FromSeconds(2), () => {
+                runtime.ShutDown(s => s.Machine == "lb1.eu-west");
+            });
             
             //runtime.Services.First().Value.
             
@@ -49,7 +57,7 @@ namespace SimMach
             env.Debug("Starting");
             try {
                 while (!env.Token.IsCancellationRequested) {
-                    env.Debug("Running");
+                    //env.Debug("Running");
                     await env.Delay(1000);
                 }
             } catch (TaskCanceledException) { }
@@ -61,7 +69,7 @@ namespace SimMach
             env.Debug("Starting");
             try {
                 while (!env.Token.IsCancellationRequested) {
-                    env.Debug("Running");
+                    //env.Debug("Running");
                     await env.Delay(5000);
                 }
             } catch (TaskCanceledException) { }

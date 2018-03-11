@@ -25,27 +25,33 @@ namespace SimMach {
             
             var env = new Sim(Id, _runtime);
             
-            _task = _factory.StartNew(() => _launcher(env).ContinueWith(done));
+            // need to get to the inner task
+            _task = _factory.StartNew(() => _launcher(env).ContinueWith(done)).Unwrap();
             _sim = env;
 
         }
 
-        /* public async Task Stop(int grace) {
+        public async Task Stop(int grace) {
             if (_task == null || _task.IsCompleted) {
                 return;
             }
-            
-            _sim.Cancel();
-            
 
-            var finished = await Task.WhenAny(_task, Task.Delay(grace));
+            _sim.Cancel();
+
+
+            var finished = await Task.WhenAny(_task, _sim.Delay(grace));
             if (finished != _task) {
-                _sim.Debug("Killing the process");
+                _sim.Debug("Terminating simulation");
                 _sim.Kill();
             }
+
             _sim = null;
             _task = null;
-        } */
+            // eliminate the future
+            
+
+
+        }
 
 
         readonly TaskScheduler _scheduler;
@@ -83,7 +89,7 @@ namespace SimMach {
                     throw new InvalidOperationException($"Can't execute {task}-{task.Status}");
                 }
             } catch (Exception ex) {
-                Console.WriteLine($"Failed executing {task}: {ex.Demystify()}");
+                Console.WriteLine($"Failed executing {task} on {_name} {ex.Demystify()}");
             }
         }
 
