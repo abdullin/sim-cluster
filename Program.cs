@@ -37,30 +37,20 @@ namespace SimMach
             
             //runtime.Services.First().Value.
             
-            runtime.Start();
+            runtime.Run();
 
-
-            Console.ReadLine();
-
-            Console.WriteLine("Shutting down...");
-            
-            runtime.ShutDown(p => p.Machine == "lb0.eu-west").Wait();
-            Console.WriteLine("Done. Starting");
-            runtime.Start(p => p.Machine == "lb0.eu-west");
-            Console.WriteLine("Booted");
-            
-
-            Console.ReadLine();
+            Console.WriteLine("Done");
 
             // at the time of the configuration, simulation doesn't exist, yet!
         }
 
         static async Task RunTelegraf(Sim env) {
+            
             env.Debug("Starting");
             try {
                 while (!env.Token.IsCancellationRequested) {
                     env.Debug("Running");
-                    await Task.Delay(1000);
+                    await env.Delay(1000);
                 }
             } catch (TaskCanceledException) { }
 
@@ -72,7 +62,7 @@ namespace SimMach
             try {
                 while (!env.Token.IsCancellationRequested) {
                     env.Debug("Running");
-                    await Task.Delay(5000, env.Token);
+                    await env.Delay(5000);
                 }
             } catch (TaskCanceledException) { }
 
@@ -80,7 +70,7 @@ namespace SimMach
         }
     }
 
-    class Topology : Dictionary<ServiceName, Func<Sim, Task>> {
+    class Topology : Dictionary<ServiceId, Func<Sim, Task>> {
         public Topology() : base(new ServiceNameComparer()) { }
     }
 

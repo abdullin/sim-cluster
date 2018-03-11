@@ -1,106 +1,172 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace SimMach {
     class Runtime {
-        public readonly Dictionary<ServiceName, Service> Services;
-        
-        
+        public readonly Dictionary<ServiceId, Service> Services;
         
         
         readonly Stopwatch _watch = Stopwatch.StartNew();
         public TimeSpan Time => _watch.Elapsed;
         public long Ticks => _watch.ElapsedTicks;
 
+        long _steps;
+        long _time;
+
+        readonly Future _future = new Future();
+        
+
         public Runtime(Topology topology) {
-            
-
-
-            Services = topology.ToDictionary(p => p.Key, p => new Service(p.Key, p.Value));
+            Services = topology.ToDictionary(p => p.Key, p => new Service(this, p.Key, p.Value));
+        }
+        
+        
+        public void Schedule(Scheduler id, TimeSpan offset, object message) {
+            _steps++;
+            var pos = _time + offset.Ticks;
+            _future.Schedule(id, pos, message);
         }
 
 
-        IEnumerable<Service> Filter(Predicate<ServiceName> filter) {
+        IEnumerable<Service> Filter(Predicate<ServiceId> filter) {
             if (null == filter) {
                 return Services.Values;
             }
 
             return Services.Where(p => filter(p.Key)).Select(p => p.Value);
         }
+        
+        long _lastDebug;
 
-        public void Start(Predicate<ServiceName> selector = null) {
+        
+        
+        long _lastActivity;
+
+        readonly long _terminateIfNoActivityFor = TimeSpan.FromSeconds(5).Ticks;
+
+        
+        public void Debug(string message) {
+            _lastActivity = _time;
+            
+            if (true) {
+                var diff = _time - _lastDebug;
+                _lastDebug = _time;
+                Console.WriteLine("+ {0:0000} ms {1}", TimeSpan.FromTicks(diff).TotalMilliseconds, message);
+            }
+        }
+
+        public void Run() {
+            var token = CancellationToken.None;
+
+            Exception halt = null;
+            foreach (var svc in Filter(id => true)) {
+                svc.Launch(task => {
+                    Console.WriteLine("Service died");
+                    if (task.Exception != null) {
+                        halt = task.Exception.InnerException;
+                    }
+                });
+            }
+            
+            var watch = Stopwatch.StartNew();
+            var reason = "none";
+            
+            
+            try {
+                var step = 0;
+                while (true) {
+                    step++;
+                 
+
+                    var hasFuture = _future.TryGetFuture(out var o);
+                    if (!hasFuture) {
+                        reason = "died";
+                        break;
+                    }
+
+                    if (o.Time > _time) {
+                        _time = o.Time;
+                    }
+
+                    switch (o.Item) {
+                        /*case NetworkRequest nr:
+                            Socket value;
+                            if (network.TryGetValue(nr.Endpoint, out value)) {
+                                network[nr.Endpoint].DispatchRequest(nr); 
+                            } else {
+                                Factory.StartNew(() => nr.Reply(new IOException("No route to host")));
+                            }
+                            break; */
+                        case Task t:
+                            o.Scheduler.Execute(t);
+                            break;
+                        default:
+                            throw new InvalidOperationException();
+                    }
+
+                    if (halt != null) {
+                        reason = "halt";
+                        break;
+                    }
+
+                    if ((_time - _lastActivity) > _terminateIfNoActivityFor) {
+                        reason = "no activity";
+                        break;
+                    }
+                }
+            } catch (Exception ex) {
+                reason = "fatal";
+                halt = ex;
+                Console.WriteLine("Fatal: " + ex);
+            }
+            
+            watch.Stop();
+
+            var softTime = TimeSpan.FromTicks(_time);
+            var factor = softTime.TotalHours / watch.Elapsed.TotalHours;
+
+            Console.WriteLine("Simulation parameters:");
+            Console.WriteLine($"Result: {reason.ToUpper()}");
+
+            if (halt != null) {
+                Console.WriteLine(halt.Demystify());
+            }
+
+            Console.WriteLine($"Simulated {softTime.TotalHours:F1} hours in {_steps} steps.");
+            Console.WriteLine($"Took {watch.Elapsed.TotalSeconds:F1} seconds of real time (x{factor:F0} speed-up)");
+
+        }
+
+        /*
+        public void Start(Predicate<ServiceId> selector = null) {
             foreach (var svc in Filter(selector)) {
                 svc.Launch();
             }
-        }
+        }*/
 
-        public Task ShutDown(Predicate<ServiceName> selector = null, int grace = 1000) {
+        /*public Task ShutDown(Predicate<ServiceId> selector = null, int grace = 1000) {
             var tasks = Filter(selector).Select(p => p.Stop(grace)).ToArray();
             return Task.WhenAll(tasks);
-        }
-    }
-    
-    
-    class Service {
+        }*/
         
-        public readonly ServiceName Name;
-        readonly Func<Sim, Task> _launcher;
-
-
-
-        Task _task;
-        public Sim _sim;
-
-        public void Launch() {
-            if (_task != null && !_task.IsCompleted) {
-                throw new InvalidOperationException($"Can't launch {Name} while previous instance is {_task.Status}");
-            }
-            
-            
-            var env = new Sim(this);
-            _task = Task.Factory.StartNew(() => _launcher(env).Wait());
-            _sim = env;
-
-        }
-
-        public async Task Stop(int grace) {
-            if (_task == null || _task.IsCompleted) {
-                return;
-            }
-            
-            _sim.Cancel();
-            
-
-            var finished = await Task.WhenAny(_task, Task.Delay(grace));
-            if (finished != _task) {
-                _sim.Debug("Killing the process");
-                _sim.Kill();
-            }
-            _sim = null;
-            _task = null;
-        }
-
-
-        public Service(ServiceName name, Func<Sim, Task> launcher) {
-            
-            Name = name;
-            _launcher = launcher;
-        }
-        
+       
+       
     }
-
-  
-
-
 
 
     class Sim {
-        readonly Service Service;
+        
+        readonly ServiceId Id;
         readonly Runtime Runtime;
+        
 
         readonly CancellationTokenSource _cts;
 
@@ -109,11 +175,23 @@ namespace SimMach {
 
         readonly long[] _failures; 
 
-        public Sim(Service service) {
+        public Sim(ServiceId id, Runtime runtime) {
             _cts = new CancellationTokenSource();
-            Service = service;
+            Id = id;
+            Runtime = runtime;
+            
             
             _failures = new long[Enum.GetValues(typeof(Effect)).Length];
+        }
+
+        public Task Delay(TimeSpan ts) {
+            var task = new FutureTask(ts);
+            task.Start();
+            return task;
+        }
+
+        public Task Delay(int ms) {
+            return Delay(TimeSpan.FromMilliseconds(ms));
         }
 
 
@@ -137,21 +215,23 @@ namespace SimMach {
             _killed = true;
         }
 
-        public async Task SpinDisk() {
+        /*public async Task SpinDisk() {
             if (Has(Effect.DiskLagging)) {
                 Debug("Disk is down");
                 await Task.Delay(TimeSpan.FromSeconds(10));
             }
-        }
+        }*/
         
-
-        public void Debug(string message) {
+        public void Debug(string l) {
+            Runtime.Debug($" {Id.Machine,-11} {Id.Service,-20} {l}");
+        }
+        /*public void Debug(string message) {
             if (_killed) {
                 Console.WriteLine($"ZOMBIE!!! {Service.Name}: {message}");
             } else {
                 Console.WriteLine($"{Service.Name}: {message}");
             }
-        }
+        }*/
     }
 
 
@@ -169,5 +249,4 @@ namespace SimMach {
             Till = till;
         }
     }
-    
 }

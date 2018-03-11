@@ -2,7 +2,7 @@
 using System.Linq;
 
 namespace SimMach {
-    class ServiceName {
+    class ServiceId {
 
         public readonly string Full;
         public readonly string Machine;
@@ -10,7 +10,7 @@ namespace SimMach {
         public readonly string Zone;
         
 
-        public ServiceName(string input) {
+        public ServiceId(string input) {
             Full = input;
             
             var strings = input.Split(':');
@@ -25,8 +25,8 @@ namespace SimMach {
         }
 
         
-        public static implicit operator ServiceName(string input) {
-            return new ServiceName(input);
+        public static implicit operator ServiceId(string input) {
+            return new ServiceId(input);
         }
 
 
@@ -35,12 +35,12 @@ namespace SimMach {
         }
     }
     
-    sealed class ServiceNameComparer : IEqualityComparer<ServiceName> {
-        public bool Equals(ServiceName x, ServiceName y) {
+    sealed class ServiceNameComparer : IEqualityComparer<ServiceId> {
+        public bool Equals(ServiceId x, ServiceId y) {
             return x.Full == y.Full;
         }
 
-        public int GetHashCode(ServiceName obj) {
+        public int GetHashCode(ServiceId obj) {
             return obj.Full.GetHashCode();
         }
     }
