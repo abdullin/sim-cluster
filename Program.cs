@@ -63,7 +63,7 @@ namespace SimMach
             try {
                 while (!env.Token.IsCancellationRequested) {
                     //env.Debug("Running");
-                    await Future.Delay(1000);
+                    await Future.Delay(1000, env.Token);
                 }
             } catch (TaskCanceledException) { }
 
@@ -75,9 +75,11 @@ namespace SimMach
             try {
                 while (!env.Token.IsCancellationRequested) {
                     //env.Debug("Running");
-                    await Future.Delay(5000);
+                    await Future.Delay(5000, env.Token);
                 }
-            } catch (TaskCanceledException) { }
+            } catch (TaskCanceledException) {
+                env.Debug("Cancel");
+            }
 
             env.Debug("Shutting down");
         }

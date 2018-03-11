@@ -29,7 +29,7 @@ namespace SimMach {
         
         
         
-        public readonly FuturePlan FuturePlan = new FuturePlan();
+        public readonly FutureQueue FutureQueue = new FutureQueue();
 
         // system schedulers
         readonly Scheduler _scheduler;
@@ -46,7 +46,7 @@ namespace SimMach {
         public void Schedule(Scheduler id, TimeSpan offset, object message) {
             _steps++;
             var pos = _time + offset.Ticks;
-            FuturePlan.Schedule(id, pos, message);
+            FutureQueue.Schedule(id, pos, message);
         }
 
         public void Plan(Func<Task> a) {
@@ -99,7 +99,7 @@ namespace SimMach {
                     step++;
                  
 
-                    var hasFuture = FuturePlan.TryGetFuture(out var o);
+                    var hasFuture = FutureQueue.TryGetFuture(out var o);
                     if (!hasFuture) {
                         reason = "died";
                         break;

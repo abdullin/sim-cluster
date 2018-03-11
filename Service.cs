@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SimMach {
@@ -43,7 +44,7 @@ namespace SimMach {
             var finished = await Task.WhenAny(_task, Future.Delay(grace));
             if (finished != _task) {
                 _sim.Debug("Shutdown timeout. ERASING FUTURE to KILL");
-                _runtime.FuturePlan.Erase(_scheduler);
+                _runtime.FutureQueue.Erase(_scheduler);
                 _sim.Kill();
             }
 
@@ -117,19 +118,24 @@ namespace SimMach {
 
     sealed class Future : Task {
         public readonly TimeSpan Ts;
+        readonly CancellationToken Token;
 
-        public Future(TimeSpan ts) : base(() => { }) {
+        public bool IsDenied => Token.IsCancellationRequested;
+
+        public Future(TimeSpan ts, CancellationToken token) : base(() => { }) {
+            // future cancellation doesn't propagate
+            Token = token;
             Ts = ts;
         }
         // TODO: should react to the service cancellation token
-        public static Task Delay(TimeSpan ts) {
-            var task = new Future(ts);
+        public static Task Delay(TimeSpan ts, CancellationToken token = default (CancellationToken)) {
+            var task = new Future(ts, token);
             task.Start();
             return task;
         }
         
-        public static Task Delay(int ms) {
-            return Delay(TimeSpan.FromMilliseconds(ms));
+        public static Task Delay(int ms, CancellationToken token = default (CancellationToken)) {
+            return Delay(TimeSpan.FromMilliseconds(ms), token);
         }
     }
 }
