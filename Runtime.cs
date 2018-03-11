@@ -180,7 +180,7 @@ namespace SimMach {
         }*/
 
         public Task ShutDown(Predicate<ServiceId> selector = null, int grace = 1000) {
-            Debug("Shutting down");
+            
             var tasks = Filter(selector).Select(p => p.Stop(grace)).ToArray();
             return Task.WhenAll(tasks);
         }

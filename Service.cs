@@ -26,6 +26,8 @@ namespace SimMach {
             var env = new Sim(Id, _runtime);
             
             // need to get to the inner task
+            
+            // TODO: a task should return an exit code
             _task = _factory.StartNew(() => _launcher(env).ContinueWith(done)).Unwrap();
             _sim = env;
 
@@ -41,7 +43,9 @@ namespace SimMach {
 
             var finished = await Task.WhenAny(_task, _sim.Delay(grace));
             if (finished != _task) {
-                _sim.Debug("Terminating simulation");
+                _sim.Debug("Shutdown timeout. Abandon timeline");
+                
+                _runtime.Future.EraseTimeline(_scheduler);
                 _sim.Kill();
             }
 
@@ -54,7 +58,7 @@ namespace SimMach {
         }
 
 
-        readonly TaskScheduler _scheduler;
+        readonly Scheduler _scheduler;
         readonly TaskFactory _factory;
         readonly Runtime _runtime;
 
