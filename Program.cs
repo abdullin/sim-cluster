@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection.Metadata.Ecma335;
 using System.Threading;
@@ -39,8 +40,10 @@ namespace SimMach
             
             
             
-            runtime.Plan(TimeSpan.FromSeconds(2), () => {
-                runtime.ShutDown(s => s.Machine == "lb1.eu-west");
+            runtime.Plan(TimeSpan.FromSeconds(2), async () => {
+                runtime.Debug("Shutting 'lb1.eu-west' down");
+                await runtime.ShutDown(s => s.Machine == "lb1.eu-west");
+                runtime.Debug("Shutdown complete");
             });
             
             //runtime.Services.First().Value.

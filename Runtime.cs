@@ -159,7 +159,7 @@ namespace SimMach {
 
             var softTime = TimeSpan.FromTicks(_time);
             var factor = softTime.TotalHours / watch.Elapsed.TotalHours;
-            Debug($"Result: {reason.ToUpper()}");
+            Debug($"{reason.ToUpper()}");
             Console.WriteLine("Simulation parameters:");
             
 
