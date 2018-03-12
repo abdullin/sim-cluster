@@ -21,6 +21,8 @@ namespace SimMach {
             list.Add((id, message));
 
             if (message is Future f) {
+                // TODO: we can add cancel registration 
+                // instead of manually searching
                 _cancellable.Add(f, (id,pos));
             }
         }
@@ -56,7 +58,7 @@ namespace SimMach {
 
                     // check if there are any cancellable future tasks
                     var cancels = _cancellable
-                        .Where(p => p.Key.IsDenied)
+                        .Where(p => p.Key.Token.IsCancellationRequested)
                         .ToList();
 
                     // no, move forward

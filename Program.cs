@@ -9,11 +9,6 @@ using System.Threading.Tasks;
 namespace SimMach
 {
     class Program {
-
-        const string LoadBalancer = "lb.us-west";
-        
-
-
         static void Main(string[] args) {
 
 
@@ -24,11 +19,12 @@ namespace SimMach
                 {"lb1.eu-west:nginx", RunNginx},
                 {"lb1.eu-west:telegraf", RunTelegraf}
             };
-            var runtime = new Runtime(t);
-            runtime.Timeout = TimeSpan.FromSeconds(10);
-            
+            var sim = new Runtime(t) {
+                Timeout = TimeSpan.FromSeconds(10)
+            };
 
-            var machines = runtime.Services.GroupBy(p => p.Key.Machine);
+
+            var machines = sim.Services.GroupBy(p => p.Key.Machine);
             // printing
             foreach (var m in machines) {
                 Console.WriteLine($"{m.Key}");
@@ -40,32 +36,32 @@ namespace SimMach
             
             
             
-            runtime.Plan(async () => {
-                runtime.Start();
+            sim.Plan(async () => {
+                sim.StartServices();
                 await Future.Delay(1000);
                 
-                runtime.Debug($"Power off 'lb1.eu-west' in 2000 ms");
-                await runtime.ShutDown(s => s.Machine == "lb1.eu-west", 2000);
+                sim.Debug($"Power off 'lb1.eu-west' in 2s");
+                await sim.StopServices(s => s.Machine == "lb1.eu-west", 2000);
                 
-                runtime.Debug($"'lb1.eu-west' is down. Booting");
+                sim.Debug($"'lb1.eu-west' is down. Booting in 3s");
                 await Future.Delay(3000);
                 
-                runtime.Start(s => s.Machine == "lb1.eu-west");
-                runtime.Debug($"'lb1.eu-west' is up and running");
+                sim.StartServices(s => s.Machine == "lb1.eu-west");
+                sim.Debug($"'lb1.eu-west' is up and running");
             });
             
-            runtime.Run();
+            sim.Run();
         }
 
         static async Task RunTelegraf(Sim env) {
-            
             env.Debug("Starting");
             try {
                 while (!env.Token.IsCancellationRequested) {
-                    //env.Debug("Running");
                     await Future.Delay(1000, env.Token);
                 }
-            } catch (TaskCanceledException) { }
+            } catch (TaskCanceledException) {
+                env.Debug("Abort");
+            }
 
             env.Debug("Shutting down");
         }
@@ -74,11 +70,10 @@ namespace SimMach
             env.Debug("Starting");
             try {
                 while (!env.Token.IsCancellationRequested) {
-                    //env.Debug("Running");
                     await Future.Delay(5000, env.Token);
                 }
             } catch (TaskCanceledException) {
-                env.Debug("Cancel");
+                env.Debug("Abort");
             }
 
             env.Debug("Shutting down");
@@ -86,7 +81,7 @@ namespace SimMach
     }
 
     class Topology : Dictionary<ServiceId, Func<Sim, Task>> {
-        public Topology() : base(new ServiceNameComparer()) { }
+        public Topology() : base(new ServiceIdComparer()) { }
     }
 
 

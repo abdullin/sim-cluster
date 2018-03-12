@@ -35,7 +35,7 @@ namespace SimMach {
         }
     }
     
-    sealed class ServiceNameComparer : IEqualityComparer<ServiceId> {
+    sealed class ServiceIdComparer : IEqualityComparer<ServiceId> {
         public bool Equals(ServiceId x, ServiceId y) {
             return x.Full == y.Full;
         }

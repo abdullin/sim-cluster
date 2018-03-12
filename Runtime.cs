@@ -170,7 +170,7 @@ namespace SimMach {
             }
         }*/
 
-        public void Start(Predicate<ServiceId> selector = null) {
+        public void StartServices(Predicate<ServiceId> selector = null) {
             foreach (var svc in Filter(selector)) {
                 svc.Launch(task => {
                     if (task.Exception != null) {
@@ -181,7 +181,7 @@ namespace SimMach {
             }
         }
         
-        public Task ShutDown(Predicate<ServiceId> selector = null, int grace = 1000) {
+        public Task StopServices(Predicate<ServiceId> selector = null, int grace = 1000) {
             var tasks = Filter(selector).Select(p => p.Stop(grace)).ToArray();
             return Task.WhenAll(tasks);
         }

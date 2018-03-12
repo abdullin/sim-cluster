@@ -83,17 +83,21 @@ namespace SimMach {
         }
 
         public void Execute(Task task) {
+            
             if (task.Status == TaskStatus.RanToCompletion) {
                 return;
             }
 
+
+
             try {
-                if (!TryExecuteTask(task)) {
-                    throw new InvalidOperationException($"Can't execute {task}-{task.Status}");
-                }
-            } catch (Exception ex) {
+                TryExecuteTask(task);
+            } 
+            catch (Exception ex) {
                 Console.WriteLine($"Failed executing {task} on {_name} {ex.Demystify()}");
+
             }
+
         }
 
         protected override IEnumerable<Task> GetScheduledTasks() {
@@ -101,6 +105,7 @@ namespace SimMach {
         }
 
         protected override void QueueTask(Task task) {
+            
             switch (task) {
                 case Future ft:
                     _sim.Schedule(this, ft.Ts, ft);
@@ -118,15 +123,20 @@ namespace SimMach {
 
     sealed class Future : Task {
         public readonly TimeSpan Ts;
-        readonly CancellationToken Token;
+        public readonly CancellationToken Token;
+        
 
-        public bool IsDenied => Token.IsCancellationRequested;
-
-        public Future(TimeSpan ts, CancellationToken token) : base(() => { }) {
+        public Future(TimeSpan ts, CancellationToken token) : base(() => {
+            if (token.IsCancellationRequested) {
+                throw new TaskCanceledException();
+            }
+            
+        }) {
             // future cancellation doesn't propagate
-            Token = token;
             Ts = ts;
+            Token = token;
         }
+        
         // TODO: should react to the service cancellation token
         public static Task Delay(TimeSpan ts, CancellationToken token = default (CancellationToken)) {
             var task = new Future(ts, token);
