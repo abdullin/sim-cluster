@@ -8,27 +8,19 @@ namespace SimMach {
     
     
     class Service {
-        
-        public readonly ServiceId Id;
+        readonly ServiceId _id;
         readonly Func<Sim, Task> _launcher;
         
-        
-
-
-
         Task _task;
-        public Sim _sim;
+        Sim _sim;
 
         public void Launch(Action<Task> done) {
             if (_task != null && !_task.IsCompleted) {
-                throw new InvalidOperationException($"Can't launch {Id} while previous instance is {_task.Status}");
+                throw new InvalidOperationException($"Can't launch {_id} while previous instance is {_task.Status}");
             }
             
-            var env = new Sim(Id, _runtime);
+            var env = new Sim(_id, _runtime);
             
-            // need to get to the inner task
-            
-            // TODO: a task should return an exit code
             _task = _factory.StartNew(() => _launcher(env).ContinueWith(done)).Unwrap();
             _sim = env;
 
@@ -50,10 +42,6 @@ namespace SimMach {
 
             _sim = null;
             _task = null;
-            // eliminate the future
-            
-
-
         }
 
 
@@ -62,7 +50,7 @@ namespace SimMach {
         readonly Runtime _runtime;
 
         public Service(Runtime runtime, ServiceId id, Func<Sim, Task> launcher) {
-            Id = id;
+            _id = id;
             _launcher = launcher;
             _runtime = runtime;
             
@@ -83,19 +71,18 @@ namespace SimMach {
         }
 
         public void Execute(Task task) {
-            
             if (task.Status == TaskStatus.RanToCompletion) {
                 return;
             }
 
 
-
             try {
-                TryExecuteTask(task);
+                if (!TryExecuteTask(task)) {
+                    //_sim.Debug($"Didn't execute a task {task.GetType().Name} ({task.Status})");
+                }
             } 
             catch (Exception ex) {
-                Console.WriteLine($"Failed executing {task} on {_name} {ex.Demystify()}");
-
+                _sim.Debug($"Failed executing {task} on {_name} {ex.Demystify()}");
             }
 
         }
@@ -124,20 +111,19 @@ namespace SimMach {
     sealed class Future : Task {
         public readonly TimeSpan Ts;
         public readonly CancellationToken Token;
-        
 
-        public Future(TimeSpan ts, CancellationToken token) : base(() => {
+        Future(TimeSpan ts, CancellationToken token) : base(() => {
             if (token.IsCancellationRequested) {
                 throw new TaskCanceledException();
             }
-            
         }) {
-            // future cancellation doesn't propagate
+            // We don't pass the token to the base task. Just like with Task.Delay
+            // we want the task to blow up on awaiter, instead of simply
+            // stopping further execution.
             Ts = ts;
             Token = token;
         }
         
-        // TODO: should react to the service cancellation token
         public static Task Delay(TimeSpan ts, CancellationToken token = default (CancellationToken)) {
             var task = new Future(ts, token);
             task.Start();

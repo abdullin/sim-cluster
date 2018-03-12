@@ -39,10 +39,6 @@ namespace SimMach {
             }
         }
 
-
-        
-
-
         public bool TryGetFuture(out FutureItem item) {
 
             while (true) {
@@ -72,6 +68,8 @@ namespace SimMach {
                         // move denied future to now
                         list.Add((sched, future));
                         _cancellable.Remove(future);
+                        // we could technically also remove the task from the future
+                        // however, since it will already be faulted, we don't care
                     }
                 }
 

@@ -151,15 +151,15 @@ namespace SimMach {
             var softTime = TimeSpan.FromTicks(_time);
             var factor = softTime.TotalHours / watch.Elapsed.TotalHours;
             Debug($"{reason.ToUpper()}");
-            Console.WriteLine("Simulation parameters:");
+            //Console.WriteLine("Simulation parameters:");
             
 
             if (_halt != null) {
                 Console.WriteLine(_halt.Demystify());
             }
 
-            Console.WriteLine($"Simulated {softTime.TotalHours:F1} hours in {_steps} steps.");
-            Console.WriteLine($"Took {watch.Elapsed.TotalSeconds:F1} seconds of real time (x{factor:F0} speed-up)");
+            Console.WriteLine($"Simulated {Moment.Print(softTime)} in {_steps} steps.");
+            Console.WriteLine($"Took {Moment.Print(watch.Elapsed)} of real time (x{factor:F0} speed-up)");
 
         }
 
@@ -264,6 +264,19 @@ namespace SimMach {
         public Failure(Effect effect, long till) {
             Effect = effect;
             Till = till;
+        }
+    }
+
+
+    public static class Moment {
+        public static string Print(TimeSpan ts) {
+            if (ts.TotalMinutes < 1) {
+                return $"{ts.TotalSeconds:F1} seconds";
+            }
+
+            return $"{ts.TotalHours:F1} hours";
+
+
         }
     }
 }

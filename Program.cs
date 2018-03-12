@@ -14,10 +14,10 @@ namespace SimMach
 
 
             var t = new Topology {
-                {"lb0.eu-west:nginx", RunNginx},
-                {"lb0.eu-west:telegraf", RunTelegraf},
-                {"lb1.eu-west:nginx", RunNginx},
-                {"lb1.eu-west:telegraf", RunTelegraf}
+                {"lb0.eu-west:slow", SlowProcess},
+                {"lb0.eu-west:quick", QuickProcess},
+                {"lb1.eu-west:slow", SlowProcess},
+                {"lb1.eu-west:quick", QuickProcess}
             };
             var sim = new Runtime(t) {
                 Timeout = TimeSpan.FromSeconds(10)
@@ -53,7 +53,7 @@ namespace SimMach
             sim.Run();
         }
 
-        static async Task RunTelegraf(Sim env) {
+        static async Task QuickProcess(Sim env) {
             env.Debug("Starting");
             try {
                 while (!env.Token.IsCancellationRequested) {
@@ -62,11 +62,9 @@ namespace SimMach
             } catch (TaskCanceledException) {
                 env.Debug("Abort");
             }
-
             env.Debug("Shutting down");
         }
-
-        static async Task RunNginx(Sim env) {
+        static async Task SlowProcess(Sim env) {
             env.Debug("Starting");
             try {
                 while (!env.Token.IsCancellationRequested) {
@@ -75,7 +73,6 @@ namespace SimMach
             } catch (TaskCanceledException) {
                 env.Debug("Abort");
             }
-
             env.Debug("Shutting down");
         }
     }
