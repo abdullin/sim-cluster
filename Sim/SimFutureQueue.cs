@@ -4,34 +4,34 @@ using System.Linq;
 using System.Threading.Tasks;
 
 namespace SimMach {
-    class FutureQueue {
-        readonly SortedList<long, List<(Scheduler, object)>>
-            _future = new SortedList<long, List<(Scheduler, object)>>();
+    class SimFutureQueue {
+        readonly SortedList<long, List<(SimScheduler, object)>>
+            _future = new SortedList<long, List<(SimScheduler, object)>>();
 
-        readonly Dictionary<Future, (Scheduler,long)> _cancellable = new Dictionary<Future, (Scheduler,long)>();
+        readonly Dictionary<SimFutureTask, (SimScheduler,long)> _cancellable = new Dictionary<SimFutureTask, (SimScheduler,long)>();
 
 
-        public void Schedule(Scheduler id, long pos, object message) {
+        public void Schedule(SimScheduler id, long pos, object message) {
 
             if (!_future.TryGetValue(pos, out var list)) {
-                list = new List<(Scheduler, object)>();
+                list = new List<(SimScheduler, object)>();
                 _future.Add(pos, list);
             }
 
             list.Add((id, message));
 
-            if (message is Future f) {
+            if (message is SimFutureTask f) {
                 // TODO: we can add cancel registration 
                 // instead of manually searching
                 _cancellable.Add(f, (id,pos));
             }
         }
 
-        public void Erase(Scheduler id) {
+        public void Erase(SimScheduler id) {
             foreach (var list in _future.Values) {
 
                 foreach (var item in list.Where(t => t.Item1 == id)) {
-                    if (item.Item2 is Future f) {
+                    if (item.Item2 is SimFutureTask f) {
                         _cancellable.Remove(f);
                     }
                 }
@@ -84,10 +84,10 @@ namespace SimMach {
 
     struct FutureItem {
         public readonly long Time;
-        public readonly Scheduler Scheduler;
+        public readonly SimScheduler Scheduler;
         public readonly object Item;
 
-        public FutureItem(long time, Scheduler scheduler, object item) {
+        public FutureItem(long time, SimScheduler scheduler, object item) {
             Time = time;
             Scheduler = scheduler;
             Item = item;

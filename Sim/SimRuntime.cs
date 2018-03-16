@@ -6,12 +6,11 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace SimMach {
-    class Runtime {
-        public readonly Dictionary<ServiceId, Service> Services;
+    class SimRuntime {
+        public readonly Dictionary<ServiceId, SimService> Services;
         
         
         
@@ -29,33 +28,32 @@ namespace SimMach {
         
         
         
-        public readonly FutureQueue FutureQueue = new FutureQueue();
+        public readonly SimFutureQueue FutureQueue = new SimFutureQueue();
 
         // system schedulers
-        readonly Scheduler _scheduler;
+        readonly SimScheduler _scheduler;
         readonly TaskFactory _factory;
 
-        public Runtime(Topology topology) {
-            Services = topology.ToDictionary(p => p.Key, p => new Service(this, p.Key, p.Value));
+        public SimRuntime(Topology topology) {
+            Services = topology.ToDictionary(p => p.Key, p => new SimService(this, p.Key, p.Value));
             
-            _scheduler = new Scheduler(this,new ServiceId("simulation:proc"));
+            _scheduler = new SimScheduler(this,new ServiceId("simulation:proc"));
             _factory = new TaskFactory(_scheduler);
         }
         
         
-        public void Schedule(Scheduler id, TimeSpan offset, object message) {
+        public void Schedule(SimScheduler id, TimeSpan offset, object message) {
             _steps++;
             var pos = _time + offset.Ticks;
             FutureQueue.Schedule(id, pos, message);
         }
 
         public void Plan(Func<Task> a) {
-            
             Schedule(_scheduler,TimeSpan.Zero, _factory.StartNew(a));
         }
 
 
-        IEnumerable<Service> Filter(Predicate<ServiceId> filter) {
+        IEnumerable<SimService> Filter(Predicate<ServiceId> filter) {
             if (null == filter) {
                 return Services.Values;
             }
@@ -173,54 +171,6 @@ namespace SimMach {
         public Task StopServices(Predicate<ServiceId> selector = null, int grace = 1000) {
             var tasks = Filter(selector).Select(p => p.Stop(grace)).ToArray();
             return Task.WhenAll(tasks);
-        }
-    }
-
-
-    class Env {
-        
-        readonly ServiceId Id;
-        readonly Runtime Runtime;
-        
-
-        readonly CancellationTokenSource _cts;
-
-        public CancellationToken Token => _cts.Token;
-
-        public Env(ServiceId id, Runtime runtime) {
-            _cts = new CancellationTokenSource();
-            Id = id;
-            Runtime = runtime;
-        }
-
-        public void Cancel() {
-            // issues a soft cancel token
-            _cts.Cancel();
-        }
-
-        bool _killed;
-
-        public void Kill() {
-            _killed = true;
-        }
-
-        
-        public void Debug(string l) {
-            Runtime.Debug($"  {Id.Machine,-13} {Id.Service,-20} {l}");
-        }
-       
-    }
-
-
-    public static class Moment {
-        public static string Print(TimeSpan ts) {
-            if (ts.TotalMinutes < 1) {
-                return $"{ts.TotalSeconds:F1} seconds";
-            }
-
-            return $"{ts.TotalHours:F1} hours";
-
-
         }
     }
 }

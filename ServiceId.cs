@@ -1,7 +1,13 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace SimMach {
+    class Topology : Dictionary<ServiceId, Func<IEnv, Task>> {
+        public Topology() : base(new ServiceIdComparer()) { }
+    }
+    
     class ServiceId {
 
         public readonly string Full;
