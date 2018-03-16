@@ -84,10 +84,7 @@ namespace SimMach {
         Exception _halt;
 
         public void Run() {
-            var token = CancellationToken.None;
-
             _halt = null;
-            
             
             var watch = Stopwatch.StartNew();
             var reason = "none";
@@ -162,20 +159,12 @@ namespace SimMach {
             Console.WriteLine($"Took {Moment.Print(watch.Elapsed)} of real time (x{factor:F0} speed-up)");
 
         }
-
-        /*
-        public void Start(Predicate<ServiceId> selector = null) {
-            foreach (var svc in Filter(selector)) {
-                svc.Launch();
-            }
-        }*/
-
+  
         public void StartServices(Predicate<ServiceId> selector = null) {
             foreach (var svc in Filter(selector)) {
                 svc.Launch(task => {
                     if (task.Exception != null) {
                         _halt = task.Exception.InnerException;
-                        return;
                     }
                 });
             }
@@ -188,7 +177,7 @@ namespace SimMach {
     }
 
 
-    class Sim {
+    class Env {
         
         readonly ServiceId Id;
         readonly Runtime Runtime;
@@ -198,26 +187,10 @@ namespace SimMach {
 
         public CancellationToken Token => _cts.Token;
 
-
-        readonly long[] _failures; 
-
-        public Sim(ServiceId id, Runtime runtime) {
+        public Env(ServiceId id, Runtime runtime) {
             _cts = new CancellationTokenSource();
             Id = id;
             Runtime = runtime;
-            
-            
-            _failures = new long[Enum.GetValues(typeof(Effect)).Length];
-        }
-
-     
-
-        public void Plan(Effect effect, long till) {
-            _failures[(byte) effect] = till;
-        }
-
-        public bool Has(Effect failure) {
-            return _failures[(byte) failure] > Runtime.Ticks;
         }
 
         public void Cancel() {
@@ -225,46 +198,17 @@ namespace SimMach {
             _cts.Cancel();
         }
 
-        // killed sim denies all interactions with the outside world
         bool _killed;
 
         public void Kill() {
             _killed = true;
         }
 
-        /*public async Task SpinDisk() {
-            if (Has(Effect.DiskLagging)) {
-                Debug("Disk is down");
-                await Task.Delay(TimeSpan.FromSeconds(10));
-            }
-        }*/
         
         public void Debug(string l) {
             Runtime.Debug($"  {Id.Machine,-13} {Id.Service,-20} {l}");
         }
-        /*public void Debug(string message) {
-            if (_killed) {
-                Console.WriteLine($"ZOMBIE!!! {Service.Name}: {message}");
-            } else {
-                Console.WriteLine($"{Service.Name}: {message}");
-            }
-        }*/
-    }
-
-
-    public enum Effect : byte{
-        None,
-        DiskLagging
-    }
-
-    public struct Failure {
-        public readonly Effect Effect;
-        public readonly long Till;
-
-        public Failure(Effect effect, long till) {
-            Effect = effect;
-            Till = till;
-        }
+       
     }
 
 

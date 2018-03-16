@@ -53,7 +53,7 @@ namespace SimMach
             sim.Run();
         }
 
-        static async Task QuickProcess(Sim env) {
+        static async Task QuickProcess(Env env) {
             env.Debug("Starting");
             try {
                 while (!env.Token.IsCancellationRequested) {
@@ -64,7 +64,7 @@ namespace SimMach
             }
             env.Debug("Shutting down");
         }
-        static async Task SlowProcess(Sim env) {
+        static async Task SlowProcess(Env env) {
             env.Debug("Starting");
             try {
                 while (!env.Token.IsCancellationRequested) {
@@ -77,7 +77,7 @@ namespace SimMach
         }
     }
 
-    class Topology : Dictionary<ServiceId, Func<Sim, Task>> {
+    class Topology : Dictionary<ServiceId, Func<Env, Task>> {
         public Topology() : base(new ServiceIdComparer()) { }
     }
 
