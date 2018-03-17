@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace SimMach {
-    public class Topology : Dictionary<ServiceId, Func<IEnv, Task>> {
-        public Topology() : base(new ServiceIdComparer()) { }
+    public class MachineDef : Dictionary<ServiceId, Func<IEnv, Task>> {
+        public MachineDef() : base(ServiceId.Comparer) { }
 
 
 
@@ -20,6 +21,35 @@ namespace SimMach {
                 }
             }
         }
+    }
+    
+    public sealed class NetworkDef {
+        readonly Dictionary<LinkId, string> _dictionary = new Dictionary<LinkId, string>(LinkId.Comparer);
+
+        public ICollection<LinkId> Links => _dictionary.Keys;
+
+        public void Link(string client, string server) {
+            _dictionary.Add(new LinkId(client, server), null);
+        }
+        
+        
+    }
+
+    public class LinkId {
+        public readonly string Client;
+        public readonly string Server;
+        public LinkId(string client, string server) {
+            Client = client;
+            Server = server;
+        }
+
+        public string Full => $"{Client}->{Server}";
+
+        public override string ToString() {
+            return Full;
+        }
+
+        public static readonly IEqualityComparer<LinkId> Comparer = new DelegateComparer<LinkId>(id => id.Full);
     }
     
     public class ServiceId {
@@ -53,15 +83,23 @@ namespace SimMach {
         public override string ToString() {
             return Full;
         }
+
+        public static IEqualityComparer<ServiceId> Comparer = new DelegateComparer<ServiceId>(id => id.Full);
     }
     
-    sealed class ServiceIdComparer : IEqualityComparer<ServiceId> {
-        public bool Equals(ServiceId x, ServiceId y) {
-            return x.Full == y.Full;
+ 
+    sealed class DelegateComparer<T> : IEqualityComparer<T> where T : class {
+        readonly Func<T, object> _selector;
+        public DelegateComparer(Func<T, object> selector) {
+            _selector = selector;
         }
 
-        public int GetHashCode(ServiceId obj) {
-            return obj.Full.GetHashCode();
+        public bool Equals(T x, T y) {
+            return _selector(x).Equals(_selector(y));
+        }
+
+        public int GetHashCode(T obj) {
+            return _selector(obj).GetHashCode();
         }
     }
 }

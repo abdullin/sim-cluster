@@ -37,9 +37,10 @@ namespace SimMach.Sim {
         protected override void QueueTask(Task task) {
             
             switch (task) {
-                case SimFutureTask ft:
-                    _sim.Schedule(this, ft.Ts, ft);
+                case IFutureJump ft:
+                    _sim.Schedule(this, ft.Deadline, ft);
                     break;
+                
                 default:
                     _sim.Schedule(this, TimeSpan.Zero, task);
                     break;

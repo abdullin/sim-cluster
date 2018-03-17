@@ -4,12 +4,20 @@ using System.Linq;
 using System.Threading.Tasks;
 
 namespace SimMach.Sim {
+
+
+    public interface IFutureJump {
+        bool FutureIsNow { get; }
+        TimeSpan Deadline { get; }
+        int Id { get; }
+    }
     
     class SimFutureQueue {
         readonly SortedList<long, List<(SimScheduler, object)>>
             _future = new SortedList<long, List<(SimScheduler, object)>>();
 
-        readonly Dictionary<SimFutureTask, (SimScheduler,long)> _cancellable = new Dictionary<SimFutureTask, (SimScheduler,long)>();
+        readonly Dictionary<IFutureJump, (SimScheduler,long)> _jumps = new Dictionary<IFutureJump, (SimScheduler,long)>();
+        
 
 
         
@@ -23,18 +31,18 @@ namespace SimMach.Sim {
 
             list.Add((id, message));
 
-            if (message is SimFutureTask f) {
+            if (message is IFutureJump f) {
                 // TODO: we can add cancel registration 
                 // instead of manually searching
-                _cancellable.Add(f, (id,pos));
+                _jumps.Add(f, (id, pos));
             }
         }
 
         public void Erase(SimScheduler id) {
             foreach (var list in _future.Values) {
                 foreach (var item in list.Where(t => t.Item1 == id)) {
-                    if (item.Item2 is SimFutureTask f) {
-                        _cancellable.Remove(f);
+                    if (item.Item2 is SimDelayTask f) {
+                        _jumps.Remove(f);
                     }
                 }
                 list.RemoveAll(t => t.Item1 == id);
@@ -50,32 +58,41 @@ namespace SimMach.Sim {
                     return false;
                 }
 
-                var list = _future.Values.First();
+                var list = _future.Values[0];
+                var time = _future.Keys[0];
+                
                 if (list.Count == 0) {
                     // we are about to jump to the next time point
 
-                    // check if there are any cancellable future tasks
-                    var cancels = _cancellable
-                        .Where(p => p.Key.Token.IsCancellationRequested)
+                    // check if there are any future tasks
+                    var jumps = _jumps
+                        .Where(p => p.Key.FutureIsNow)
                         .ToList();
 
                     // no, move forward
-                    if (cancels.Count == 0) {
+                    if (jumps.Count == 0) {
                         _future.RemoveAt(0);
                         continue;
                     }
 
                     // order by ID to have some order
-                    foreach (var (future, (sched, _)) in cancels.OrderBy(p => p.Key.Id)) {
-                        // move denied future to now
-                        list.Add((sched, future));
-                        _cancellable.Remove(future);
-                        // we could technically also remove the task from the future
-                        // however, since it will already be faulted, we don't care
+                    foreach (var (jump, (sched, pos)) in jumps.OrderBy(p => p.Key.Id)) {
+                        // move jumps to now
+                        list.Add((sched, jump));
+                        // remove from the jump list
+                        _jumps.Remove(jump);
+                        // remove from the future unless it is present
+                        if (pos != time) {
+                            var removed = _future[pos].RemoveAll(tuple => tuple.Item2 == jump);
+                            if (removed == 0) {
+                                throw new InvalidOperationException($"Didn't find jump");
+                            }
+                        }
+
                     }
                 }
 
-                var time = _future.Keys[0];
+                
                 var (scheduler, subject) = list.First();
                 list.RemoveAt(0);
                 item = new FutureItem(time, scheduler, subject);

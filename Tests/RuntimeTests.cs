@@ -1,41 +1,18 @@
 ﻿using System;
 using System.Reflection.Metadata.Ecma335;
-using System.Threading.Tasks;
 using NUnit.Framework;
 
 namespace SimMach.Sim {
-
-    public sealed class SimTest {
-        public readonly Topology Topology = new Topology();
-        public TimeSpan MaxTime = TimeSpan.MaxValue;
-        public long MaxSteps = long.MaxValue;
-
-
-
-        public void AddService(string name, Func<IEnv, Task> svc) {
-            Topology.Add(name, svc);
-        }
-
-        public void RunPlan(Func<ISimPlan, Task> plan) {
-            var env = new SimRuntime(Topology) {
-                MaxSteps = MaxSteps,
-                MaxTime = MaxTime
-            };
-            env.Plan(plan);
-            env.Run();
-        }
-    }
-
-    public sealed class SimRuntimeTests {
+    public sealed class RuntimeTests {
         [Test]
         public void RebootTest() {
             var bootCount = 0;
 
-            var test = new SimTest() {
+            var test = new TestRuntime() {
                 MaxTime = TimeSpan.FromMinutes(2)
             };
 
-            test.AddService("com:test", async env => {
+            test.Services.Add("com:test", async env => {
                 bootCount++;
                 while (!env.Token.IsCancellationRequested) {
                     await env.SimulateWork(100);
@@ -54,14 +31,14 @@ namespace SimMach.Sim {
 
         [Test]
         public void NonResponsiveServiceIsKilledWithoutMercy() {
-            var test = new SimTest {
+            var test = new TestRuntime {
                 MaxTime = TimeSpan.FromMinutes(1)
             };
 
             var launched = true;
             var terminated = false;
 
-            test.AddService("com:test", async env => {
+            test.Services.Add("com:test", async env => {
                 launched = true;
                 try {
                     while (!env.Token.IsCancellationRequested) {
@@ -85,14 +62,14 @@ namespace SimMach.Sim {
         
         [Test]
         public void StopResponsiveService() {
-            var test = new SimTest {
+            var test = new TestRuntime {
                 MaxTime = TimeSpan.FromMinutes(1)
             };
 
             
             var terminated = TimeSpan.Zero;
 
-            test.AddService("com:test", async env => {
+            test.Services.Add("com:test", async env => {
                 try {
                     while (!env.Token.IsCancellationRequested) {
                         await env.SimulateWork(10000, env.Token);

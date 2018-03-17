@@ -11,8 +11,15 @@ namespace SimMach {
         Task SimulateWork(int ms, CancellationToken token = default (CancellationToken));
         
         TimeSpan Time { get; }
+        Task<IConn> Connect(string endpoint, int port);
+        Task<IConn> Listen(int port);
     }
-    
+
+
+    public interface IConn : IDisposable {
+        Task Write(object message);
+        Task<object> Read();
+    }
     
     public interface ISimPlan {
         void StartServices(Predicate<ServiceId> selector = null);

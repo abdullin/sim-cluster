@@ -13,15 +13,15 @@ namespace SimMach.Sim {
 
         public CancellationToken Token => _cts.Token;
         public Task Delay(int i, CancellationToken token ) {
-            return SimFutureTask.Delay(i, token);
+            return SimDelayTask.Delay(i, token);
         }
         public Task Delay(TimeSpan i, CancellationToken token) {
-            return SimFutureTask.Delay(i, token);
+            return SimDelayTask.Delay(i, token);
         }
 
         public async Task SimulateWork(int ms, CancellationToken token) {
             Runtime.RecordActivity();
-            await SimFutureTask.Delay(ms, token);
+            await SimDelayTask.Delay(ms, token);
             Runtime.RecordActivity();
         }
 
@@ -43,8 +43,17 @@ namespace SimMach.Sim {
         }
 
         public TimeSpan Time => Runtime.Time;
-
         
+        public Task<IConn> Connect(string endpoint, int port) {
+            var server = new SimEndpoint(endpoint, port);
+            return Runtime.Connect(Id, server);
+        }
+
+        public Task<IConn> Listen(int port) {
+            return Runtime.Listen(Id, port);
+        }
+
+
         public void Debug(string l) {
             Runtime.Debug($"  {Id.Machine,-13} {Id.Service,-20} {l}");
         }

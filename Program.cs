@@ -17,11 +17,11 @@ namespace SimMach
 
             var bootCount = 0;
 
-            var test = new SimTest() {
+            var test = new TestRuntime() {
                 MaxTime = TimeSpan.FromMinutes(2)
             };
 
-            test.AddService("com:test", async env => {
+            test.Services.Add("com:test", async env => {
                 bootCount++;
                 while (!env.Token.IsCancellationRequested) {
                     await env.SimulateWork(100);

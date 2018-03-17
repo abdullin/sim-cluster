@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 namespace SimMach.Sim {
     class SimRuntime : ISimPlan {
         public readonly Dictionary<ServiceId, SimService> Services;
-        
+        public readonly SimNetwork Network;
         
         
         public TimeSpan Time => TimeSpan.FromTicks(_time);
@@ -35,8 +35,9 @@ namespace SimMach.Sim {
         readonly SimScheduler _scheduler;
         readonly TaskFactory _factory;
 
-        public SimRuntime(Topology topology) {
+        public SimRuntime(MachineDef topology, NetworkDef net) {
             Services = topology.ToDictionary(p => p.Key, p => new SimService(this, p.Key, p.Value));
+            Network = new SimNetwork(net, this);
             
             _scheduler = new SimScheduler(this,new ServiceId("simulation:proc"));
             _factory = new TaskFactory(_scheduler);
@@ -85,10 +86,10 @@ namespace SimMach.Sim {
         }
 
         Task ISimPlan.Delay(int i) {
-            return SimFutureTask.Delay(i);
+            return SimDelayTask.Delay(i);
         }
         Task ISimPlan.Delay(TimeSpan i) {
-            return SimFutureTask.Delay(i);
+            return SimDelayTask.Delay(i);
         }
 
         Exception _halt;
@@ -117,14 +118,6 @@ namespace SimMach.Sim {
                     }
 
                     switch (o.Item) {
-                        /*case NetworkRequest nr:
-                            Socket value;
-                            if (network.TryGetValue(nr.Endpoint, out value)) {
-                                network[nr.Endpoint].DispatchRequest(nr); 
-                            } else {
-                                Factory.StartNew(() => nr.Reply(new IOException("No route to host")));
-                            }
-                            break; */
                         case Task t:
                             o.Scheduler.Execute(t);
                             break;
@@ -189,7 +182,17 @@ namespace SimMach.Sim {
             var tasks = Filter(selector).Select(p => p.Stop(grace)).ToArray();
             return Task.WhenAll(tasks);
         }
+
+        
+        public Task<IConn> Listen(ServiceId server, int port) {
+
+            var owner = Services[server];
+            return Network.Listen(owner, port);
+        }
+
+        public Task<IConn> Connect(ServiceId client, SimEndpoint server) {
+            var process = Services[client];
+            return Network.Connect(process, server);
+        }
     }
-
-
 }

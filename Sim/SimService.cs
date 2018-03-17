@@ -7,7 +7,7 @@ namespace SimMach.Sim {
     
     
     class SimService {
-        readonly ServiceId _id;
+        public readonly ServiceId Id;
         readonly Func<SimEnv, Task> _launcher;
         
         Task _task;
@@ -15,10 +15,10 @@ namespace SimMach.Sim {
 
         public void Launch(Action<Task> done) {
             if (_task != null && !_task.IsCompleted) {
-                throw new InvalidOperationException($"Can't launch {_id} while previous instance is {_task.Status}");
+                throw new InvalidOperationException($"Can't launch {Id} while previous instance is {_task.Status}");
             }
             
-            var env = new SimEnv(_id, _runtime);
+            var env = new SimEnv(Id, _runtime);
             
             _task = _factory.StartNew(() => _launcher(env).ContinueWith(done)).Unwrap();
             _env = env;
@@ -49,7 +49,7 @@ namespace SimMach.Sim {
         readonly SimRuntime _runtime;
 
         public SimService(SimRuntime runtime, ServiceId id, Func<SimEnv, Task> launcher) {
-            _id = id;
+            Id = id;
             _launcher = launcher;
             _runtime = runtime;
             
