@@ -14,24 +14,23 @@ namespace SimMach.Sim {
             object response = null;
 
             run.Net.Link("client", "server");
-            run.Net.Link("server", "client");
 
-            run.Services.Add("client:", async env => {
-                using (var conn = await env.Connect("server",80)) {
+            run.Services.Add("client:service", async env => {
+                using (var conn = await env.Connect("server", 80)) {
                     await conn.Write("Hello");
                     response = await conn.Read();
                 }
             });
-            
-            run.Services.Add("server:", async env => {
+
+            run.Services.Add("server:service", async env => {
                 using (var conn = await env.Listen(80)) {
                     request = await conn.Read();
                     await conn.Write("World");
                 }
             });
-            
+
             run.RunAll();
-            
+
             Assert.AreEqual("Hello", request);
             Assert.AreEqual("World", response);
         }

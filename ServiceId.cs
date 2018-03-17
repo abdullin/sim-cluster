@@ -30,6 +30,7 @@ namespace SimMach {
 
         public void Link(string client, string server) {
             _dictionary.Add(new LinkId(client, server), null);
+            _dictionary.Add(new LinkId(server, client), null);
         }
         
         

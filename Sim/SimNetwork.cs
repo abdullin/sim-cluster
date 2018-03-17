@@ -59,18 +59,20 @@ namespace SimMach.Sim {
 
             var (msg, sender) = await socket.Read();
 
-            var linkId = new LinkId(sender.Machine, endpoint.Machine);
-            var link = _links[linkId];
+            var linkId = new LinkId(endpoint.Machine, sender.Machine);
+            if (!_links.TryGetValue(linkId, out var link)) {
+                throw new IOException($"Route not found {linkId}");
+            }
+            
             // msg == metadata
             
             return new SimConn(socket, sender, link);
         }
 
-        public Task<IConn> Connect(SimEnv process, SimEndpoint server) {
-            SimLink link;
+        public async Task<IConn> Connect(SimEnv process, SimEndpoint server) {
             var linkId = new LinkId(process.Id.Machine, server.Machine);
-            if (!_links.TryGetValue(linkId, out link)) {
-                return Task.FromException<IConn>(new IOException($"Route not found: {linkId}"));
+            if (!_links.TryGetValue(linkId, out var link)) {
+                throw new IOException($"Route not found: {linkId}");
             }
 
             
@@ -83,20 +85,21 @@ namespace SimMach.Sim {
             _sockets.Add(clientEndpoint, clientSocket);
             
             IConn conn = new SimConn(clientSocket, server, link);
+            await conn.Write("OPEN");
             
-            return Task.FromResult(conn);
+            return conn;
         }
     }
     
     class SimConn : IConn {
 
         // maintain and send connection ID;
-        readonly SimSocket _this;
+        readonly SimSocket _socket;
         readonly SimEndpoint _remote;
         readonly SimLink _link;
         
-        public SimConn(SimSocket @this, SimEndpoint remote, SimLink link) {
-            _this = @this;
+        public SimConn(SimSocket socket, SimEndpoint remote, SimLink link) {
+            _socket = socket;
             _remote = remote;
             _link = link;
         }
@@ -104,14 +107,17 @@ namespace SimMach.Sim {
 
         public Task Write(object message) {
             // we don't wait for the ACK.
-            return _link.Send(_this.Endpoint, _remote, message);
+            return _link.Send(_socket.Endpoint, _remote, message);
         }
 
         public async Task<object> Read() {
-            var (msg, sender) = await _link.Read(_this);
+
+            var (msg, sender) = await _socket.Read();
+            
             if (sender.ToString() != _remote.ToString()) {
                 throw new IOException("Packet from unknown host");
             }
+            _socket.Debug($"Receive {msg}");
 
             return msg;
 
@@ -136,6 +142,10 @@ namespace SimMach.Sim {
             Endpoint = endpoint;
         }
 
+        public void Debug(string message) {
+            _env.Debug(message);
+        }
+
         public void Deliver(object msg, SimEndpoint client) {
             if (_pendingRead != null) {
                 _pendingRead.SetResult((msg, client));
@@ -149,8 +159,6 @@ namespace SimMach.Sim {
             if (_incoming.TryDequeue(out var tuple)) {
                 return Task.FromResult(tuple);
             }
-            
-            Console.WriteLine("Pending");
 
             _pendingRead = _env.Promise<(object, SimEndpoint)>(TimeSpan.FromSeconds(15), _env.Token);
             return _pendingRead.Task;
@@ -183,7 +191,8 @@ namespace SimMach.Sim {
         readonly TaskFactory _factory;
         
         public void Debug(string l) {
-            _network.Debug($"  {_link.Full} {l}");
+            
+            _network.Debug($"  {_link.Full,-34} {l}");
         }
 
         public SimLink(SimScheduler scheduler, SimNetwork network, LinkId link) {
@@ -196,22 +205,15 @@ namespace SimMach.Sim {
         public Task Send(SimEndpoint client, SimEndpoint server, object msg) {
             // TODO: network cancellation
             _factory.StartNew(async () => {
+                // delivery wait
+                Debug($"Send {msg}");
                 await SimDelayTask.Delay(50);
-                Debug($"Deliver {msg}");
+                
                 _network.InternalDeliver(client, server, msg);
             });
             return Task.FromResult(true);
         }
 
-        public Task<(object, SimEndpoint)> Read(SimSocket endpoint) {
-            // need to scheduler future on this factory
-
-            return _factory.StartNew(async () => {
-                
-                var conn = await endpoint.Read();
-                Debug($"Receive {conn.Item1}");
-                return conn;
-            }).Unwrap();
-        }
+       
     }
 }

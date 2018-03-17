@@ -50,7 +50,7 @@ namespace SimMach.Sim {
             }
 
             if (!source.Completed) {
-                throw new TimeoutException();
+                throw new TimeoutException($"Promise timed out after {Moment.Print(ts)}");
             }
 
             if (source.Error != null) {
