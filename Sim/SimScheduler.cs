@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace SimMach {
+namespace SimMach.Sim {
     sealed class SimScheduler : TaskScheduler {
         readonly SimRuntime _sim;
         readonly ServiceId _name;

@@ -8,8 +8,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 
-namespace SimMach {
-    class SimRuntime {
+namespace SimMach.Sim {
+    class SimRuntime : ISimPlan {
         public readonly Dictionary<ServiceId, SimService> Services;
         
         
@@ -17,16 +17,17 @@ namespace SimMach {
         public TimeSpan Time => TimeSpan.FromTicks(_time);
         public long Ticks => _time;
         
-        public TimeSpan Timeout {
-            set { MaxTime = value.Ticks; }
+        public TimeSpan MaxTime {
+            set { MaxTicks = value.Ticks; }
         }
 
         long _steps;
         long _time;
 
-        public long MaxTime = long.MaxValue;
+        public long MaxTicks = long.MaxValue;
+        public long MaxSteps = long.MaxValue;
         
-        
+        long _maxInactiveTicks = TimeSpan.FromSeconds(60).Ticks;
         
         public readonly SimFutureQueue FutureQueue = new SimFutureQueue();
 
@@ -40,7 +41,7 @@ namespace SimMach {
             _scheduler = new SimScheduler(this,new ServiceId("simulation:proc"));
             _factory = new TaskFactory(_scheduler);
         }
-        
+
         
         public void Schedule(SimScheduler id, TimeSpan offset, object message) {
             _steps++;
@@ -48,8 +49,8 @@ namespace SimMach {
             FutureQueue.Schedule(id, pos, message);
         }
 
-        public void Plan(Func<Task> a) {
-            Schedule(_scheduler,TimeSpan.Zero, _factory.StartNew(a));
+        public void Plan(Func<ISimPlan, Task> a) {
+            Schedule(_scheduler,TimeSpan.Zero, _factory.StartNew(() => a(this)));
         }
 
 
@@ -66,9 +67,13 @@ namespace SimMach {
         
         
         long _lastActivity;
-        readonly long _terminateIfNoActivityFor = TimeSpan.FromSeconds(5).Ticks;
-
         
+
+        public void RecordActivity() {
+            _lastActivity = _time;
+        }
+
+
         public void Debug(string message) {
             _lastActivity = _time;
             
@@ -79,6 +84,13 @@ namespace SimMach {
             }
         }
 
+        Task ISimPlan.Delay(int i) {
+            return SimFutureTask.Delay(i);
+        }
+        Task ISimPlan.Delay(TimeSpan i) {
+            return SimFutureTask.Delay(i);
+        }
+
         Exception _halt;
 
         public void Run() {
@@ -86,13 +98,13 @@ namespace SimMach {
             
             var watch = Stopwatch.StartNew();
             var reason = "none";
+            
             Debug($"{"start".ToUpper()}");
             
             try {
                 var step = 0;
                 while (true) {
                     step++;
-                 
 
                     var hasFuture = FutureQueue.TryGetFuture(out var o);
                     if (!hasFuture) {
@@ -125,13 +137,18 @@ namespace SimMach {
                         break;
                     }
 
-                    if ((_time - _lastActivity) >= _terminateIfNoActivityFor) {
-                        reason = "no activity";
+                    if ((_time - _lastActivity) >= _maxInactiveTicks) {
+                        reason = "no activity " + Moment.Print(TimeSpan.FromTicks(_maxInactiveTicks));
                         break;
                     }
 
-                    if (_time >= MaxTime) {
-                        reason = "end";
+                    if (_steps >= MaxSteps) {
+                        reason = MaxSteps + " steps reached";
+                        break;
+                    }
+
+                    if (_time >= MaxTicks) {
+                        reason = "max time";
                         break;
                     }
                 }
@@ -157,8 +174,8 @@ namespace SimMach {
             Console.WriteLine($"Took {Moment.Print(watch.Elapsed)} of real time (x{factor:F0} speed-up)");
 
         }
-  
-        public void StartServices(Predicate<ServiceId> selector = null) {
+
+        void ISimPlan.StartServices(Predicate<ServiceId> selector = null) {
             foreach (var svc in Filter(selector)) {
                 svc.Launch(task => {
                     if (task.Exception != null) {
@@ -167,10 +184,12 @@ namespace SimMach {
                 });
             }
         }
-        
-        public Task StopServices(Predicate<ServiceId> selector = null, int grace = 1000) {
+
+        Task ISimPlan.StopServices(Predicate<ServiceId> selector = null, int grace = 1000) {
             var tasks = Filter(selector).Select(p => p.Stop(grace)).ToArray();
             return Task.WhenAll(tasks);
         }
     }
+
+
 }

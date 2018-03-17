@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using System.Reflection.Metadata.Ecma335;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,12 +10,32 @@ using SimMach.Sim;
 
 namespace SimMach
 {
+
+   
     class Program {
         static void Main(string[] args) {
 
+            var bootCount = 0;
 
+            var test = new SimTest() {
+                MaxTime = TimeSpan.FromMinutes(2)
+            };
 
-            var t = new Topology {
+            test.AddService("com:test", async env => {
+                bootCount++;
+                while (!env.Token.IsCancellationRequested) {
+                    await env.SimulateWork(100);
+                }
+            });
+            
+            test.RunPlan(async plan => {
+                plan.StartServices();
+                await plan.Delay(TimeSpan.FromMinutes(1));
+                await plan.StopServices();
+                plan.StartServices();
+            });
+
+            /*var t = new Topology {
                 {"lb0.eu-west:slow", SlowProcess},
                 {"lb0.eu-west:quick", QuickProcess},
                 {"lb1.eu-west:slow", SlowProcess},
@@ -23,35 +44,22 @@ namespace SimMach
             var sim = new SimRuntime(t) {
                 Timeout = TimeSpan.FromSeconds(10)
             };
-
-
-            var machines = sim.Services.GroupBy(p => p.Key.Machine);
-            // printing
-            foreach (var m in machines) {
-                Console.WriteLine($"{m.Key}");
-
-                foreach (var svc in m) {
-                    Console.WriteLine($"  {svc.Key.Service}");
-                }
-            }
             
-            
-            
-            sim.Plan(async () => {
-                sim.StartServices();
-                await SimFutureTask.Delay(1000);
+            sim.Plan(async plan => {
+                plan.StartServices();
+                await plan.Delay(1000);
                 
-                sim.Debug($"Power off 'lb1.eu-west' in 2s");
-                await sim.StopServices(s => s.Machine == "lb1.eu-west", 2000);
+                plan.Debug($"Power off 'lb1.eu-west' in 2s");
+                await plan.StopServices(s => s.Machine == "lb1.eu-west", 2000);
                 
-                sim.Debug($"'lb1.eu-west' is down. Booting in 3s");
-                await SimFutureTask.Delay(3000);
+                plan.Debug($"'lb1.eu-west' is down. Booting in 3s");
+                await plan.Delay(3000);
                 
-                sim.StartServices(s => s.Machine == "lb1.eu-west");
-                sim.Debug($"'lb1.eu-west' is up and running");
+                plan.StartServices(s => s.Machine == "lb1.eu-west");
+                plan.Debug($"'lb1.eu-west' is up and running");
             });
             
-            sim.Run();
+            sim.Run();*/
         }
 
         static async Task QuickProcess(IEnv env) {
@@ -77,13 +85,4 @@ namespace SimMach
             env.Debug("Shutting down");
         }
     }
-
-   
-
-
-    
-
-
-    
-    
 }

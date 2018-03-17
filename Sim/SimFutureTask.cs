@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SimMach {
+namespace SimMach.Sim {
     sealed class SimFutureTask : Task {
         public readonly TimeSpan Ts;
         public readonly CancellationToken Token;
@@ -19,13 +19,13 @@ namespace SimMach {
             Token = token;
         }
         
-        static Task Delay(TimeSpan ts, CancellationToken token = default (CancellationToken)) {
+        public new static Task Delay(TimeSpan ts, CancellationToken token = default (CancellationToken)) {
             var task = new SimFutureTask(ts, token);
             task.Start();
             return task;
         }
         
-        public static Task Delay(int ms, CancellationToken token = default (CancellationToken)) {
+        public new static Task Delay(int ms, CancellationToken token = default (CancellationToken)) {
             return Delay(TimeSpan.FromMilliseconds(ms), token);
         }
     }

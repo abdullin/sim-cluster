@@ -1,8 +1,9 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using SimMach.Sim;
 
-namespace SimMach {
+namespace SimMach.Sim {
     
     
     class SimService {
@@ -31,7 +32,7 @@ namespace SimMach {
 
             _env.Cancel();
 
-            var finished = await Task.WhenAny(_task, _env.Delay(grace));
+            var finished = await Task.WhenAny(_task, _env.Delay(grace, CancellationToken.None));
             if (finished != _task) {
                 _env.Debug("Shutdown timeout. ERASING FUTURE to KILL");
                 _runtime.FutureQueue.Erase(_scheduler);

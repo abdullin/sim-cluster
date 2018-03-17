@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace SimMach {
+namespace SimMach.Sim {
+    
     class SimFutureQueue {
         readonly SortedList<long, List<(SimScheduler, object)>>
             _future = new SortedList<long, List<(SimScheduler, object)>>();
@@ -11,6 +12,8 @@ namespace SimMach {
         readonly Dictionary<SimFutureTask, (SimScheduler,long)> _cancellable = new Dictionary<SimFutureTask, (SimScheduler,long)>();
 
 
+        
+        
         public void Schedule(SimScheduler id, long pos, object message) {
 
             if (!_future.TryGetValue(pos, out var list)) {
@@ -29,7 +32,6 @@ namespace SimMach {
 
         public void Erase(SimScheduler id) {
             foreach (var list in _future.Values) {
-
                 foreach (var item in list.Where(t => t.Item1 == id)) {
                     if (item.Item2 is SimFutureTask f) {
                         _cancellable.Remove(f);

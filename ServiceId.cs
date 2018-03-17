@@ -4,11 +4,25 @@ using System.Linq;
 using System.Threading.Tasks;
 
 namespace SimMach {
-    class Topology : Dictionary<ServiceId, Func<IEnv, Task>> {
+    public class Topology : Dictionary<ServiceId, Func<IEnv, Task>> {
         public Topology() : base(new ServiceIdComparer()) { }
+
+
+
+        public void PrettyPrint() {
+            var machines = this.GroupBy(p => p.Key.Machine);
+            // printing
+            foreach (var m in machines) {
+                Console.WriteLine($"{m.Key}");
+
+                foreach (var svc in m) {
+                    Console.WriteLine($"  {svc.Key.Service}");
+                }
+            }
+        }
     }
     
-    class ServiceId {
+    public class ServiceId {
 
         public readonly string Full;
         public readonly string Machine;
