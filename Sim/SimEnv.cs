@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 namespace SimMach.Sim {
     class SimEnv : IEnv {
         
-        readonly ServiceId Id;
+        public readonly ServiceId Id;
         readonly SimRuntime Runtime;
         
 
@@ -17,6 +17,10 @@ namespace SimMach.Sim {
         }
         public Task Delay(TimeSpan i, CancellationToken token) {
             return SimDelayTask.Delay(i, token);
+        }
+
+        public SimCompletionSource<T> Promise<T>(TimeSpan timeout, CancellationToken token) {
+            return new SimCompletionSource<T>(timeout, token);
         }
 
         public async Task SimulateWork(int ms, CancellationToken token) {
@@ -46,11 +50,11 @@ namespace SimMach.Sim {
         
         public Task<IConn> Connect(string endpoint, int port) {
             var server = new SimEndpoint(endpoint, port);
-            return Runtime.Connect(Id, server);
+            return Runtime.Connect(this, server);
         }
 
         public Task<IConn> Listen(int port) {
-            return Runtime.Listen(Id, port);
+            return Runtime.Listen(this, port);
         }
 
 

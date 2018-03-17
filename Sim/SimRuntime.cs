@@ -184,15 +184,12 @@ namespace SimMach.Sim {
         }
 
         
-        public Task<IConn> Listen(ServiceId server, int port) {
-
-            var owner = Services[server];
-            return Network.Listen(owner, port);
+        public Task<IConn> Listen(SimEnv process, int port) {
+            return Network.Listen(process, port);
         }
 
-        public Task<IConn> Connect(ServiceId client, SimEndpoint server) {
-            var process = Services[client];
-            return Network.Connect(process, server);
+        public Task<IConn> Connect(SimEnv client, SimEndpoint server) {
+            return Network.Connect(client, server);
         }
     }
 }

@@ -48,12 +48,12 @@ namespace SimMach.Sim {
             socket.Deliver(msg, from);
         }
 
-        public async Task<IConn> Listen(SimService server, int port) {
+        public async Task<IConn> Listen(SimEnv proc, int port) {
             // socket is bound to the owner
-            var endpoint = new SimEndpoint(server.Id.Machine, port);
+            var endpoint = new SimEndpoint(proc.Id.Machine, port);
 
             if (!_sockets.TryGetValue(endpoint, out var socket)) {
-                socket = new SimSocket(server, endpoint);
+                socket = new SimSocket(proc, endpoint);
                 _sockets.Add(endpoint, socket);
             }
 
@@ -66,7 +66,7 @@ namespace SimMach.Sim {
             return new SimConn(socket, sender, link);
         }
 
-        public Task<IConn> Connect(SimService process, SimEndpoint server) {
+        public Task<IConn> Connect(SimEnv process, SimEndpoint server) {
             SimLink link;
             var linkId = new LinkId(process.Id.Machine, server.Machine);
             if (!_links.TryGetValue(linkId, out link)) {
@@ -124,15 +124,15 @@ namespace SimMach.Sim {
 
 
     sealed class SimSocket {
-        SimService Owner;
+        readonly SimEnv _env;
         public readonly SimEndpoint Endpoint;
         
         SimCompletionSource<(object, SimEndpoint)> _pendingRead;
 
         readonly Queue<(object, SimEndpoint)> _incoming = new Queue<(object, SimEndpoint)>();
 
-        public SimSocket(SimService owner, SimEndpoint endpoint) {
-            Owner = owner;
+        public SimSocket(SimEnv env, SimEndpoint endpoint) {
+            _env = env;
             Endpoint = endpoint;
         }
 
@@ -152,7 +152,7 @@ namespace SimMach.Sim {
             
             Console.WriteLine("Pending");
 
-            _pendingRead = new SimCompletionSource<(object, SimEndpoint)>(TimeSpan.FromSeconds(15), CancellationToken.None);
+            _pendingRead = _env.Promise<(object, SimEndpoint)>(TimeSpan.FromSeconds(15), _env.Token);
             return _pendingRead.Task;
         }
         

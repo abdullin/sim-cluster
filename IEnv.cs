@@ -27,5 +27,6 @@ namespace SimMach {
         void Debug(string message);
         Task Delay(int i);
         Task Delay(TimeSpan i);
+        TimeSpan Time { get; }
     }
 }
