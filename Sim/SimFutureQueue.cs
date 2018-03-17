@@ -32,8 +32,6 @@ namespace SimMach.Sim {
             list.Add((id, message));
 
             if (message is IFutureJump f) {
-                // TODO: we can add cancel registration 
-                // instead of manually searching
                 _jumps.Add(f, (id, pos));
             }
         }

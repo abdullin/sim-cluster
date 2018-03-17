@@ -6,13 +6,15 @@ namespace SimMach.Sim {
         [Test]
         public void RequestReplyTest() {
             var run = new TestRuntime() {
-                MaxTime = TimeSpan.FromMinutes(2)
+                MaxTime = TimeSpan.FromMinutes(2),
+                DebugNetwork = true,
             };
 
             object request = null;
             object response = null;
 
             run.Net.Link("client", "server");
+            run.Net.Link("server", "client");
 
             run.Services.Add("client:", async env => {
                 using (var conn = await env.Connect("server",80)) {

@@ -37,8 +37,8 @@ namespace SimMach.Sim {
         internal Exception Error;
         public bool Completed;
 
-        public readonly TimeSpan Timeout;
-        public readonly CancellationToken Token;
+        
+        public readonly SimPromise<T> Task;
 
         public void SetResult(T result) {
             
@@ -51,11 +51,12 @@ namespace SimMach.Sim {
             Completed = true;
         }
 
-        public SimPromise<T> Task => new SimPromise<T>(Timeout, Token, this);
+        
 
         public SimCompletionSource(TimeSpan timeout, CancellationToken token = default (CancellationToken)) {
-            Timeout = timeout;
-            Token = token;
+            
+            Task = new SimPromise<T>(timeout, token, this);
+            Task.Start();
         }
     }
 

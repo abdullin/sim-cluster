@@ -9,6 +9,7 @@ namespace SimMach.Sim {
         
         public TimeSpan MaxTime = TimeSpan.MaxValue;
         public long MaxSteps = long.MaxValue;
+        public bool DebugNetwork;
 
 
 
@@ -21,6 +22,8 @@ namespace SimMach.Sim {
             
             
             env.Plan(plan);
+
+            env.Network.DebugPackets = DebugNetwork;
             env.Run();
         }
 

@@ -19,8 +19,15 @@ namespace SimMach.Sim {
             foreach (var link in def.Links) {
                 var service = new ServiceId($"network:{link.Client}->{link.Server}");
                 var scheduler = new SimScheduler(_runtime, service);
-                _links.Add(link, new SimLink(scheduler, this));
+                _links.Add(link, new SimLink(scheduler, this, link));
             }
+        }
+
+        public bool DebugPackets;
+
+        public void Debug(string message) {
+            if (DebugPackets)
+            _runtime.Debug(message);
         }
 
         readonly Dictionary<LinkId, SimLink> _links = new Dictionary<LinkId, SimLink>(LinkId.Comparer);
@@ -42,7 +49,6 @@ namespace SimMach.Sim {
         }
 
         public async Task<IConn> Listen(SimService server, int port) {
-            
             // socket is bound to the owner
             var endpoint = new SimEndpoint(server.Id.Machine, port);
 
@@ -52,8 +58,8 @@ namespace SimMach.Sim {
             }
 
             var (msg, sender) = await socket.Read();
-            
-            var linkId= new LinkId(sender.Machine, endpoint.Machine);
+
+            var linkId = new LinkId(sender.Machine, endpoint.Machine);
             var link = _links[linkId];
             // msg == metadata
             
@@ -143,6 +149,8 @@ namespace SimMach.Sim {
             if (_incoming.TryDequeue(out var tuple)) {
                 return Task.FromResult(tuple);
             }
+            
+            Console.WriteLine("Pending");
 
             _pendingRead = new SimCompletionSource<(object, SimEndpoint)>(TimeSpan.FromSeconds(15), CancellationToken.None);
             return _pendingRead.Task;
@@ -169,22 +177,27 @@ namespace SimMach.Sim {
     }
 
     sealed class SimLink {
-        SimNetwork _network;
+        readonly SimNetwork _network;
+        readonly LinkId _link;
         SimScheduler _scheduler;
         readonly TaskFactory _factory;
         
+        public void Debug(string l) {
+            _network.Debug($"  {_link.Full} {l}");
+        }
 
-        public SimLink(SimScheduler scheduler, SimNetwork network) {
+        public SimLink(SimScheduler scheduler, SimNetwork network, LinkId link) {
             _scheduler = scheduler;
             _network = network;
+            _link = link;
             _factory = new TaskFactory(_scheduler);
-
         }
 
         public Task Send(SimEndpoint client, SimEndpoint server, object msg) {
             // TODO: network cancellation
             _factory.StartNew(async () => {
                 await SimDelayTask.Delay(50);
+                Debug($"Deliver {msg}");
                 _network.InternalDeliver(client, server, msg);
             });
             return Task.FromResult(true);
@@ -193,7 +206,12 @@ namespace SimMach.Sim {
         public Task<(object, SimEndpoint)> Read(SimSocket endpoint) {
             // need to scheduler future on this factory
 
-            return _factory.StartNew(async () => await endpoint.Read()).Unwrap();
+            return _factory.StartNew(async () => {
+                
+                var conn = await endpoint.Read();
+                Debug($"Receive {conn.Item1}");
+                return conn;
+            }).Unwrap();
         }
     }
 }
