@@ -20,6 +20,12 @@ namespace SimMach {
         Task Write(object message);
         Task<object> Read();
     }
+
+    public interface IFuture<T> {
+        void SetResult(T result);
+        void SetError(Exception ex);
+        Task<T> Task { get; }
+    }
     
     public interface ISimPlan {
         void StartServices(Predicate<ServiceId> selector = null);

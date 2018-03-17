@@ -27,6 +27,11 @@ namespace SimMach.Sim {
             env.Run();
         }
 
+        public void RunScript(Func<IEnv, Task> script) {
+            Services.Add("local:script", script);
+            RunAll();
+        }
+
 
         public void RunAll() {
             RunPlan(async plan => plan.StartServices());

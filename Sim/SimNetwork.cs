@@ -127,7 +127,7 @@ namespace SimMach.Sim {
         readonly SimEnv _env;
         public readonly SimEndpoint Endpoint;
         
-        SimCompletionSource<(object, SimEndpoint)> _pendingRead;
+        SimFuture<(object, SimEndpoint)> _pendingRead;
 
         readonly Queue<(object, SimEndpoint)> _incoming = new Queue<(object, SimEndpoint)>();
 

@@ -19,8 +19,8 @@ namespace SimMach.Sim {
             return SimDelayTask.Delay(i, token);
         }
 
-        public SimCompletionSource<T> Promise<T>(TimeSpan timeout, CancellationToken token) {
-            return new SimCompletionSource<T>(timeout, token);
+        public SimFuture<T> Promise<T>(TimeSpan timeout, CancellationToken token) {
+            return new SimFuture<T>(timeout, token);
         }
 
         public async Task SimulateWork(int ms, CancellationToken token) {

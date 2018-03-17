@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SimMach.Sim {
@@ -15,6 +16,7 @@ namespace SimMach.Sim {
         
         
         public TimeSpan Time => TimeSpan.FromTicks(_time);
+
         public long Ticks => _time;
         
         public TimeSpan MaxTime {

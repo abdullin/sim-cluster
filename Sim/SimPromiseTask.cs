@@ -4,13 +4,13 @@ using System.Threading.Tasks;
 
 namespace SimMach.Sim {
     
-    sealed class SimCompletionSource<T>  {
+    sealed class SimFuture<T> : IFuture<T> {
         internal T Result;
         internal Exception Error;
         public bool Completed;
 
         
-        public readonly SimPromise<T> Task;
+        public Task<T> Task { get; }
 
         public void SetResult(T result) {
             
@@ -24,24 +24,27 @@ namespace SimMach.Sim {
         }
 
         
+        public SimFuture(int timeoutMs, CancellationToken token = default (CancellationToken)) {
+            Task = new SimFutureTask<T>(TimeSpan.FromMilliseconds(timeoutMs), token, this);
+            Task.Start();
+        }
 
-        public SimCompletionSource(TimeSpan timeout, CancellationToken token = default (CancellationToken)) {
-            
-            Task = new SimPromise<T>(timeout, token, this);
+        public SimFuture(TimeSpan timeout, CancellationToken token = default (CancellationToken)) {
+            Task = new SimFutureTask<T>(timeout, token, this);
             Task.Start();
         }
     }
     
-    sealed class SimPromise<T> : Task<T>, IFutureJump {
+    sealed class SimFutureTask<T> : Task<T>, IFutureJump {
 
 
         readonly CancellationToken _token;
-        readonly SimCompletionSource<T> _source;
+        readonly SimFuture<T> _source;
 
 
-        public SimPromise(TimeSpan ts, 
+        public SimFutureTask(TimeSpan ts, 
             CancellationToken token, 
-            SimCompletionSource<T> source) : base (() => {
+            SimFuture<T> source) : base (() => {
             if (token.IsCancellationRequested) {
                 throw new TaskCanceledException();
             }
