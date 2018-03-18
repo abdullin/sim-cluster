@@ -46,8 +46,6 @@ namespace SimMach.Sim {
             };
 
 
-
-
             int eventsReceived = 0;
             int eventsToSend = 5;
             bool closed = false;
@@ -57,13 +55,10 @@ namespace SimMach.Sim {
                 using (var conn = await env.Connect("server", 80)) {
                     await conn.Write("Subscribe");
 
-                    while (true) {
-                        var response = await conn.Read();
-                        if (response == null) {
-                            break;
+                    using (var stream = conn.ReadStream()) {
+                        while (await stream.MoveNext()) {
+                            eventsReceived++;
                         }
-
-                        eventsReceived++;
                     }
 
                     closed = true;
@@ -78,7 +73,11 @@ namespace SimMach.Sim {
                         await env.Delay(750, env.Token);
                         await conn.Write($"Event {i}"); 
                     }
-                    
+
+                    await conn.Write(new SimHeaders() {
+                        EndStream = true
+                    });
+
                 }
             });
 

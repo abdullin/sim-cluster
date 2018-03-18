@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Reflection.Emit;
 using System.Threading;
 using System.Threading.Tasks;
+using SimMach.Sim;
 
 namespace SimMach {
     public interface IEnv {
@@ -31,10 +33,52 @@ namespace SimMach {
         public static Task<object> Read(this IConn conn) {
             return conn.Read(Timeout.InfiniteTimeSpan);
         }
+
+        public static IAsyncEnumerable<object> ReadStream(this IConn conn) {
+            return new RequestStream(conn);
+        }
+        
+        
     }
 
 
-public interface IFuture<T> {
+    public interface IAsyncEnumerable<T> : IDisposable{
+        Task<bool> MoveNext();
+        T Current { get; }
+    }
+
+    public sealed class RequestStream : IAsyncEnumerable<object> {
+        readonly IConn _conn;
+
+        public RequestStream(IConn conn) {
+            _conn = conn;
+        }
+
+        public async Task<bool> MoveNext() {
+            // TODO: timeout + cancel
+            Current = await _conn.Read();
+            if (Current == null) {
+                Current = null;
+                return false;
+            }
+
+            if (Current is SimHeaders h && h.EndStream) {
+                Current = null;
+                return false;
+            }
+
+            return true;
+        }
+
+        public object Current { get; private set; }
+
+        public void Dispose() {
+            
+        }
+    }
+
+
+    public interface IFuture<T> {
         void SetResult(T result);
         void SetError(Exception ex);
         Task<T> Task { get; }

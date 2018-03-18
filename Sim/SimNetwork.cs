@@ -4,6 +4,7 @@ using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Schema;
 
 namespace SimMach.Sim {
 
@@ -110,6 +111,9 @@ namespace SimMach.Sim {
             return _link.Send(_socket.Endpoint, _remote, message);
         }
 
+
+        bool _closed;
+
         public async Task<object> Read(TimeSpan timeout) {
 
             var (msg, sender) = await _socket.Read(timeout);
@@ -117,6 +121,13 @@ namespace SimMach.Sim {
             if (sender.ToString() != _remote.ToString()) {
                 throw new IOException("Packet from unknown host");
             }
+
+            if (msg is SimHeaders h) {
+                if (h.CloseConn) {
+                    _closed = true;
+                }
+            }
+
             _socket.Debug($"Receive {msg}");
 
             return msg;
@@ -124,7 +135,26 @@ namespace SimMach.Sim {
         }
 
         public void Dispose() {
+            if (!_closed)
+            _link.Send(_socket.Endpoint, _remote, new SimHeaders() {
+                CloseConn = true
+            });
+
+            _closed = true;
             // drop socket on dispose
+        }
+    }
+
+    sealed class SimHeaders {
+        public int StatusOk;
+        public bool EndStream;
+        public bool CloseConn;
+
+
+        public override string ToString() {
+            var end = EndStream ? " END_STREAM" : "";
+            var close = CloseConn ? " CLOSE" : "";
+            return $"{StatusOk}{end}{close}";
         }
     }
 
