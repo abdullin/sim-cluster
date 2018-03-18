@@ -35,39 +35,37 @@ namespace SimMach.Sim {
 
         readonly Dictionary<SimEndpoint, SimSocket> _sockets = new Dictionary<SimEndpoint, SimSocket>(SimEndpoint.Comparer);
 
-
-        public void InternalDeliver(SimEndpoint from, SimEndpoint to, object msg) {
-            SimSocket socket;
-            if (!_sockets.TryGetValue(to, out socket)) {
-                // socket not bound
-
-                _links[new LinkId(to.Machine, from.Machine)]
-                    .Send(to, from, new IOException("Port not bound"));
-                return;
-            }
-            
-            socket.Deliver(msg, from);
+        public void SendPacket(SimEndpoint from, SimEndpoint to, object message) {
+            _links[new LinkId(from.Machine, to.Machine)]
+                .Send(from, to, message);
         }
 
-        public async Task<IConn> Listen(SimEnv proc, int port, TimeSpan timeout) {
+
+        public void InternalDeliver(SimEndpoint from, SimEndpoint to, object msg) {
+            if (!_sockets.TryGetValue(to, out var socket)) {
+                // socket not bound
+                SendPacket(from, to, new IOException("Socket not found"));
+                return;
+            }
+             // https://eklitzke.org/how-tcp-sockets-work
+            
+            socket.Deliver(msg, from, this);
+        }
+        
+        
+
+        public async Task<ISocket> Listen(SimEnv proc, int port, TimeSpan timeout) {
             // socket is bound to the owner
             var endpoint = new SimEndpoint(proc.Id.Machine, port);
 
-            if (!_sockets.TryGetValue(endpoint, out var socket)) {
-                socket = new SimSocket(proc, endpoint);
-                _sockets.Add(endpoint, socket);
+            if (_sockets.ContainsKey(endpoint)) {
+                throw new IOException($"Address {endpoint} in use");
             }
 
-            var (msg, sender) = await socket.Read(timeout);
+            var socket = new SimSocket(proc, endpoint);
+            _sockets.Add(endpoint, socket);
 
-            var linkId = new LinkId(endpoint.Machine, sender.Machine);
-            if (!_links.TryGetValue(linkId, out var link)) {
-                throw new IOException($"Route not found {linkId}");
-            }
-            
-            // msg == metadata
-            
-            return new SimConn(socket, sender, link);
+            return socket;
         }
 
         public async Task<IConn> Connect(SimEnv process, SimEndpoint server) {
@@ -81,12 +79,18 @@ namespace SimMach.Sim {
             // todo: allow Azure SNAT delay scenario
             var clientEndpoint = new SimEndpoint(process.Id.Machine, 999);
             
+            // do we have a real connection already?
+            // if yes - then reuse
+            
 
             var clientSocket = new SimSocket(process, clientEndpoint);
             _sockets.Add(clientEndpoint, clientSocket);
             
-            IConn conn = new SimConn(clientSocket, server, link);
-            await conn.Write("OPEN");
+            var conn = new SimConn(clientSocket, server, this, process);
+            
+            clientSocket._connections.Add(server, conn);
+            
+            await conn.Write("SYN");
             
             return conn;
         }
@@ -97,75 +101,97 @@ namespace SimMach.Sim {
         // maintain and send connection ID;
         readonly SimSocket _socket;
         readonly SimEndpoint _remote;
-        readonly SimLink _link;
+        readonly SimNetwork _link;
+        readonly SimEnv _env;
         
-        public SimConn(SimSocket socket, SimEndpoint remote, SimLink link) {
+        
+        SimFuture<object> _pendingRead;
+        
+
+        readonly Queue<object> _incoming = new Queue<object>();
+
+
+        static readonly object FIN = "FIN";
+        
+        public SimConn(SimSocket socket, SimEndpoint remote, SimNetwork link, SimEnv env) {
             _socket = socket;
             _remote = remote;
             _link = link;
+            _env = env;
         }
 
 
-        public Task Write(object message) {
+        public async Task Write(object message) {
+            if (_closed) {
+                throw new IOException("Socket closed");
+            }
             // we don't wait for the ACK.
-            return _link.Send(_socket.Endpoint, _remote, message);
+            _link.SendPacket(_socket.Endpoint, _remote, message);
         }
 
 
         bool _closed;
+        
 
         public async Task<object> Read(TimeSpan timeout) {
 
-            var (msg, sender) = await _socket.Read(timeout);
+            if (_closed) {
+                throw new IOException("Socket closed");
+            }
             
-            if (sender.ToString() != _remote.ToString()) {
-                throw new IOException("Packet from unknown host");
+            if (_incoming.TryDequeue(out var tuple)) {
+                return tuple;
             }
 
-            if (msg is SimHeaders h) {
-                if (h.CloseConn) {
-                    _closed = true;
-                }
-            }
+            _pendingRead = _env.Promise<object>(timeout, _env.Token);
+            var msg = await _pendingRead.Task;
 
+            
             _socket.Debug($"Receive {msg}");
-
             return msg;
-
         }
 
         public void Dispose() {
-            if (!_closed)
-            _link.Send(_socket.Endpoint, _remote, new SimHeaders() {
-                CloseConn = true
-            });
+            if (!_closed) {
+                _link.SendPacket(_socket.Endpoint, _remote, FIN);
+                _closed = true;
+            }
 
-            _closed = true;
             // drop socket on dispose
         }
-    }
 
-    sealed class SimHeaders {
-        public int StatusOk;
-        public bool EndStream;
-        public bool CloseConn;
-
-
-        public override string ToString() {
-            var end = EndStream ? " END_STREAM" : "";
-            var close = CloseConn ? " CLOSE" : "";
-            return $"{StatusOk}{end}{close}";
+        public void Deliver(object msg) {
+            if (msg == FIN) {
+                _closed = true;
+                return;
+            }
+            if (_pendingRead != null) {
+                _pendingRead.SetResult(msg);
+                _pendingRead = null;
+            } else {
+                _incoming.Enqueue(msg);
+            }
         }
     }
 
+    public interface ISocket : IDisposable {
+        Task<IConn> Accept();
+    }
 
-    sealed class SimSocket {
+
+
+
+    sealed class SimSocket : ISocket {
         readonly SimEnv _env;
         public readonly SimEndpoint Endpoint;
         
-        SimFuture<(object, SimEndpoint)> _pendingRead;
 
-        readonly Queue<(object, SimEndpoint)> _incoming = new Queue<(object, SimEndpoint)>();
+        public readonly Dictionary<SimEndpoint, SimConn> _connections =
+            new Dictionary<SimEndpoint, SimConn>(SimEndpoint.Comparer);
+
+        readonly Queue<SimConn> _incoming = new Queue<SimConn>();
+
+        SimFuture<IConn> _poll;
 
         public SimSocket(SimEnv env, SimEndpoint endpoint) {
             _env = env;
@@ -176,27 +202,40 @@ namespace SimMach.Sim {
             _env.Debug(message);
         }
 
-        public void Deliver(object msg, SimEndpoint client) {
-            if (_pendingRead != null) {
-                _pendingRead.SetResult((msg, client));
-                _pendingRead = null;
+        public Task<IConn> Accept() {
+            if (_incoming.TryDequeue(out var conn)) {
+                return Task.FromResult<IConn>(conn);
+            }
+
+            if (_poll != null) {
+                throw new IOException("There is a wait already");
+            }
+
+            _poll = _env.Promise<IConn>(Timeout.InfiniteTimeSpan, _env.Token);
+            return _poll.Task;
+        }
+
+        public void Deliver(object msg, SimEndpoint client, SimNetwork link) {
+            
+            if (_connections.TryGetValue(client, out var conn)) {
+                conn.Deliver(msg);
+                return;
+            }
+            
+            conn = new SimConn(this, client, link,_env);
+            
+            _connections.Add(client, conn);
+           
+
+            if (_poll != null) {
+                _poll.SetResult(conn);
+                _poll = null;
             } else {
-                _incoming.Enqueue((msg, client));
+                _incoming.Enqueue(conn);    
             }
         }
 
-        public Task<(object, SimEndpoint)> Read(TimeSpan timeout) {
-            if (_incoming.TryDequeue(out var tuple)) {
-                return Task.FromResult(tuple);
-            }
-
-            _pendingRead = _env.Promise<(object, SimEndpoint)>(timeout, _env.Token);
-            return _pendingRead.Task;
-        }
-        
-        
-        
-        
+        public void Dispose() { }
     }
 
     sealed class SimEndpoint {
@@ -243,7 +282,5 @@ namespace SimMach.Sim {
             });
             return Task.FromResult(true);
         }
-
-       
     }
 }

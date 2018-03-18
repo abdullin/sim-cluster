@@ -14,11 +14,11 @@ namespace SimMach {
 
         TimeSpan Time { get; }
         Task<IConn> Connect(string endpoint, int port);
-        Task<IConn> Listen(int port, TimeSpan timeout);
+        Task<ISocket> Listen(int port, TimeSpan timeout);
     }
 
     public static class ExtendIEnv {
-        public static Task<IConn> Listen(this IEnv env, int port) {
+        public static Task<ISocket> Listen(this IEnv env, int port) {
             return env.Listen(port, Timeout.InfiniteTimeSpan);
         }
     }
@@ -29,54 +29,7 @@ namespace SimMach {
         Task<object> Read(TimeSpan timeout);
     }
 
-    public static class ExtendIConn {
-        public static Task<object> Read(this IConn conn) {
-            return conn.Read(Timeout.InfiniteTimeSpan);
-        }
-
-        public static IAsyncEnumerable<object> ReadStream(this IConn conn) {
-            return new RequestStream(conn);
-        }
-        
-        
-    }
-
-
-    public interface IAsyncEnumerable<T> : IDisposable{
-        Task<bool> MoveNext();
-        T Current { get; }
-    }
-
-    public sealed class RequestStream : IAsyncEnumerable<object> {
-        readonly IConn _conn;
-
-        public RequestStream(IConn conn) {
-            _conn = conn;
-        }
-
-        public async Task<bool> MoveNext() {
-            // TODO: timeout + cancel
-            Current = await _conn.Read();
-            if (Current == null) {
-                Current = null;
-                return false;
-            }
-
-            if (Current is SimHeaders h && h.EndStream) {
-                Current = null;
-                return false;
-            }
-
-            return true;
-        }
-
-        public object Current { get; private set; }
-
-        public void Dispose() {
-            
-        }
-    }
-
+   
 
     public interface IFuture<T> {
         void SetResult(T result);

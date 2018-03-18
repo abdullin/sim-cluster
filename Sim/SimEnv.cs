@@ -50,10 +50,11 @@ namespace SimMach.Sim {
         
         public Task<IConn> Connect(string endpoint, int port) {
             var server = new SimEndpoint(endpoint, port);
+            
             return Runtime.Connect(this, server);
         }
 
-        public Task<IConn> Listen(int port, TimeSpan timeout) {
+        public Task<ISocket> Listen(int port, TimeSpan timeout) {
             return Runtime.Listen(this, port, timeout);
         }
 

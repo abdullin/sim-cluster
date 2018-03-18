@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices.ComTypes;
 using NUnit.Framework;
 
@@ -11,29 +12,40 @@ namespace SimMach.Sim {
                 DebugNetwork = true,
             };
 
-            object request = null;
-            object response = null;
+            var requests = new List<object>();
+            var responses = new List<object>();
 
             run.Net.Link("client", "server");
 
             run.Services.Add("client:service", async env => {
                 using (var conn = await env.Connect("server", 80)) {
                     await conn.Write("Hello");
-                    response = await conn.Read();
+                    responses.Add(await conn.Read(5.Sec()));
                 }
             });
 
-            run.Services.Add("server:service", async env => {
-                using (var conn = await env.Listen(80)) {
-                    request = await conn.Read();
+            async void Handler(IConn conn) {
+                using (conn) {
+                    requests.Add(await conn.Read(5.Sec()));
                     await conn.Write("World");
                 }
+            }
+
+            run.Services.Add("server:service", async env => {
+                using (var sock = await env.Listen(80)) {
+                    while (!env.Token.IsCancellationRequested) {
+                        var conn = await sock.Accept();
+                        Handler(conn);
+                    }
+                }
+                
             });
 
             run.RunAll();
 
-            Assert.AreEqual("Hello", request);
-            Assert.AreEqual("World", response);
+            CollectionAssert.AreEquivalent(new object[]{"Hello"}, requests);
+            CollectionAssert.AreEquivalent(new object[]{"World"}, responses);
+            
         }
         
         
@@ -55,29 +67,33 @@ namespace SimMach.Sim {
                 using (var conn = await env.Connect("server", 80)) {
                     await conn.Write("Subscribe");
 
-                    using (var stream = conn.ReadStream()) {
-                        while (await stream.MoveNext()) {
-                            eventsReceived++;
-                        }
+
+                    while (await conn.Read(5.Sec()) != null) {
+                        eventsReceived++;
                     }
+
 
                     closed = true;
                 }
             });
 
             run.Services.Add("server:service", async env => {
-                using (var conn = await env.Listen(80)) {
-                    await conn.Read(5.Sec());
-
-                    for (int i = 0; i < eventsToSend; i++) {
-                        await env.Delay(750, env.Token);
-                        await conn.Write($"Event {i}"); 
+                
+                async void Handler(IConn conn) {
+                    using (conn) {
+                        await conn.Read(5.Sec());
+                        for (int i = 0; i < eventsToSend; i++) {
+                            await conn.Write("Event " + i);
+                        }
                     }
-
-                    await conn.Write(new SimHeaders() {
-                        EndStream = true
-                    });
-
+                }
+                
+                using (var sock = await env.Listen(80)) {
+                    while (!env.Token.IsCancellationRequested) {
+                        // TODO = cancel + timeout
+                        var conn = await sock.Accept();
+                        Handler(conn);
+                    }
                 }
             });
 
@@ -85,6 +101,9 @@ namespace SimMach.Sim {
 
             Assert.AreEqual(eventsToSend, eventsReceived);
             Assert.IsTrue(closed, nameof(closed));
+            
+            
         }
+        
     }
 }
