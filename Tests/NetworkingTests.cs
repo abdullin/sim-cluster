@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices.ComTypes;
+using System.Threading.Tasks;
 using NUnit.Framework;
 
 namespace SimMach.Sim {
@@ -65,12 +66,20 @@ namespace SimMach.Sim {
 
             run.Services.Add("client:service", async env => {
                 using (var conn = await env.Connect("server", 80)) {
-                    await conn.Write("Subscribe");
+                    env.Debug("Subscribing");
+                    await conn.Write("SUBSCRIBE");
 
 
-                    while (await conn.Read(5.Sec()) != null) {
+                    while (!env.Token.IsCancellationRequested) {
+                        var msg = await conn.Read(5.Sec());
+                        if (msg == "END_STREAM") {
+                            env.Debug("End of stream");
+                            break;
+                        }
+                        env.Debug($"Got {msg}");
                         eventsReceived++;
                     }
+
 
 
                     closed = true;
@@ -83,8 +92,11 @@ namespace SimMach.Sim {
                     using (conn) {
                         await conn.Read(5.Sec());
                         for (int i = 0; i < eventsToSend; i++) {
+                            await env.Delay(10.Ms(), env.Token);
                             await conn.Write("Event " + i);
                         }
+
+                        await conn.Write("END_STREAM");
                     }
                 }
                 

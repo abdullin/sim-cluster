@@ -126,12 +126,24 @@ namespace SimMach.Sim {
                 throw new IOException("Socket closed");
             }
             // we don't wait for the ACK.
+            // but add latency for putting on the wire
+            //await _env.Delay(1.Ms(), _env.Token);
+            
             _link.SendPacket(_socket.Endpoint, _remote, message);
         }
 
 
         bool _closed;
-        
+
+        bool NextIsFin() {
+            return _incoming.Count == 1 && _incoming.Peek() == FIN;
+        }
+
+
+        void Close(string msg) {
+            //_socket.Debug($"Close: {msg}");
+            _closed = true;
+        }
 
         public async Task<object> Read(TimeSpan timeout) {
 
@@ -140,31 +152,35 @@ namespace SimMach.Sim {
             }
             
             if (_incoming.TryDequeue(out var tuple)) {
+
+                if (NextIsFin()) {
+                    Close("FIN");
+                }
+                
                 return tuple;
             }
 
             _pendingRead = _env.Promise<object>(timeout, _env.Token);
             var msg = await _pendingRead.Task;
 
+            //_socket.Debug($"Receive {msg}");
             
-            _socket.Debug($"Receive {msg}");
+            if (NextIsFin()) {
+                Close("FIN");
+            }
             return msg;
         }
 
         public void Dispose() {
             if (!_closed) {
                 _link.SendPacket(_socket.Endpoint, _remote, FIN);
-                _closed = true;
+                Close("Dispose");
             }
 
             // drop socket on dispose
         }
 
         public void Deliver(object msg) {
-            if (msg == FIN) {
-                _closed = true;
-                return;
-            }
             if (_pendingRead != null) {
                 _pendingRead.SetResult(msg);
                 _pendingRead = null;
@@ -275,7 +291,7 @@ namespace SimMach.Sim {
             // TODO: network cancellation
             _factory.StartNew(async () => {
                 // delivery wait
-                Debug($"Send {msg}");
+                Debug($"Send {msg ?? "null"}");
                 await SimDelayTask.Delay(50);
                 
                 _network.InternalDeliver(client, server, msg);
