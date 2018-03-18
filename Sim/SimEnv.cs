@@ -53,8 +53,8 @@ namespace SimMach.Sim {
             return Runtime.Connect(this, server);
         }
 
-        public Task<IConn> Listen(int port) {
-            return Runtime.Listen(this, port);
+        public Task<IConn> Listen(int port, TimeSpan timeout) {
+            return Runtime.Listen(this, port, timeout);
         }
 
 

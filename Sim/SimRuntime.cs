@@ -48,8 +48,15 @@ namespace SimMach.Sim {
         
         public void Schedule(SimScheduler id, TimeSpan offset, object message) {
             _steps++;
-            var pos = _time + offset.Ticks;
-            FutureQueue.Schedule(id, pos, message);
+
+            
+            if (offset == Timeout.InfiniteTimeSpan) {
+                FutureQueue.Schedule(id, SimFutureQueue.Never, message);
+            } else {
+                var pos = _time + offset.Ticks;
+                FutureQueue.Schedule(id, pos, message);
+            }
+
         }
 
         public void Plan(Func<ISimPlan, Task> a) {
@@ -186,8 +193,8 @@ namespace SimMach.Sim {
         }
 
         
-        public Task<IConn> Listen(SimEnv process, int port) {
-            return Network.Listen(process, port);
+        public Task<IConn> Listen(SimEnv process, int port, TimeSpan timeout) {
+            return Network.Listen(process, port, timeout);
         }
 
         public Task<IConn> Connect(SimEnv client, SimEndpoint server) {

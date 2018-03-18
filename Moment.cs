@@ -11,5 +11,19 @@ namespace SimMach {
 
 
         }
+
+
+        public static TimeSpan Ms(this int ms) {
+            return TimeSpan.FromMilliseconds(ms);
+        }
+
+        public static TimeSpan Sec(this int sec) {
+            return TimeSpan.FromSeconds(sec);
+        }
+
+        public static TimeSpan Minutes(this int min) {
+            return TimeSpan.FromMinutes(min);
+        }
+        
     }
 }

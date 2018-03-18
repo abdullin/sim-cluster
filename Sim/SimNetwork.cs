@@ -48,7 +48,7 @@ namespace SimMach.Sim {
             socket.Deliver(msg, from);
         }
 
-        public async Task<IConn> Listen(SimEnv proc, int port) {
+        public async Task<IConn> Listen(SimEnv proc, int port, TimeSpan timeout) {
             // socket is bound to the owner
             var endpoint = new SimEndpoint(proc.Id.Machine, port);
 
@@ -57,7 +57,7 @@ namespace SimMach.Sim {
                 _sockets.Add(endpoint, socket);
             }
 
-            var (msg, sender) = await socket.Read();
+            var (msg, sender) = await socket.Read(timeout);
 
             var linkId = new LinkId(endpoint.Machine, sender.Machine);
             if (!_links.TryGetValue(linkId, out var link)) {
@@ -110,9 +110,9 @@ namespace SimMach.Sim {
             return _link.Send(_socket.Endpoint, _remote, message);
         }
 
-        public async Task<object> Read() {
+        public async Task<object> Read(TimeSpan timeout) {
 
-            var (msg, sender) = await _socket.Read();
+            var (msg, sender) = await _socket.Read(timeout);
             
             if (sender.ToString() != _remote.ToString()) {
                 throw new IOException("Packet from unknown host");
@@ -155,12 +155,12 @@ namespace SimMach.Sim {
             }
         }
 
-        public Task<(object, SimEndpoint)> Read() {
+        public Task<(object, SimEndpoint)> Read(TimeSpan timeout) {
             if (_incoming.TryDequeue(out var tuple)) {
                 return Task.FromResult(tuple);
             }
 
-            _pendingRead = _env.Promise<(object, SimEndpoint)>(TimeSpan.FromSeconds(15), _env.Token);
+            _pendingRead = _env.Promise<(object, SimEndpoint)>(timeout, _env.Token);
             return _pendingRead.Task;
         }
         

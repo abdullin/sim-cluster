@@ -17,19 +17,21 @@ namespace SimMach.Sim {
             _future = new SortedList<long, List<(SimScheduler, object)>>();
 
         readonly Dictionary<IFutureJump, (SimScheduler,long)> _jumps = new Dictionary<IFutureJump, (SimScheduler,long)>();
-        
 
 
-        
+
+        public const int Never = -1;
         
         public void Schedule(SimScheduler id, long pos, object message) {
 
-            if (!_future.TryGetValue(pos, out var list)) {
-                list = new List<(SimScheduler, object)>();
-                _future.Add(pos, list);
-            }
+            if (pos != Never) {
+                if (!_future.TryGetValue(pos, out var list)) {
+                    list = new List<(SimScheduler, object)>();
+                    _future.Add(pos, list);
+                }
 
-            list.Add((id, message));
+                list.Add((id, message));
+            }
 
             if (message is IFutureJump f) {
                 _jumps.Add(f, (id, pos));
@@ -80,10 +82,10 @@ namespace SimMach.Sim {
                         // remove from the jump list
                         _jumps.Remove(jump);
                         // remove from the future unless it is present
-                        if (pos != time) {
+                        if (pos != time && pos != -1) {
                             var removed = _future[pos].RemoveAll(tuple => tuple.Item2 == jump);
                             if (removed == 0) {
-                                throw new InvalidOperationException($"Didn't find jump");
+                                throw new InvalidOperationException($"Didn't find jump at pos {pos}");
                             }
                         }
 

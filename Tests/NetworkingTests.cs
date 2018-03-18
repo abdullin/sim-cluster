@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices.ComTypes;
 using NUnit.Framework;
 
 namespace SimMach.Sim {
@@ -33,6 +34,58 @@ namespace SimMach.Sim {
 
             Assert.AreEqual("Hello", request);
             Assert.AreEqual("World", response);
+        }
+        
+        
+        
+        [Test]
+        public void SubscribeTest() {
+            var run = new TestRuntime() {
+                MaxTime = 2.Minutes(),
+                DebugNetwork = true,
+            };
+
+
+
+
+            int eventsReceived = 0;
+            int eventsToSend = 5;
+            bool closed = false;
+            run.Net.Link("client", "server");
+
+            run.Services.Add("client:service", async env => {
+                using (var conn = await env.Connect("server", 80)) {
+                    await conn.Write("Subscribe");
+
+                    while (true) {
+                        var response = await conn.Read();
+                        if (response == null) {
+                            break;
+                        }
+
+                        eventsReceived++;
+                    }
+
+                    closed = true;
+                }
+            });
+
+            run.Services.Add("server:service", async env => {
+                using (var conn = await env.Listen(80)) {
+                    await conn.Read(5.Sec());
+
+                    for (int i = 0; i < eventsToSend; i++) {
+                        await env.Delay(750, env.Token);
+                        await conn.Write($"Event {i}"); 
+                    }
+                    
+                }
+            });
+
+            run.RunAll();
+
+            Assert.AreEqual(eventsToSend, eventsReceived);
+            Assert.IsTrue(closed, nameof(closed));
         }
     }
 }
