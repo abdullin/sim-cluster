@@ -193,11 +193,11 @@ namespace SimMach.Sim {
         }
 
         
-        public Task<ISocket> Listen(SimEnv process, int port, TimeSpan timeout) {
+        public Task<ISocket> Listen(SimProc process, int port, TimeSpan timeout) {
             return Network.Listen(process, port, timeout);
         }
 
-        public Task<IConn> Connect(SimEnv client, SimEndpoint server) {
+        public Task<IConn> Connect(SimProc client, SimEndpoint server) {
             return Network.Connect(client, server);
         }
     }

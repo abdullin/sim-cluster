@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Schema;
 
 namespace SimMach.Sim {
 
@@ -20,7 +18,7 @@ namespace SimMach.Sim {
             foreach (var link in def.Links) {
                 var service = new ServiceId($"network:{link.Client}->{link.Server}");
                 var scheduler = new SimScheduler(_runtime, service);
-                _links.Add(link, new SimLink(scheduler, this, link));
+                _routes.Add(link, new SimRoute(scheduler, this, link));
             }
         }
 
@@ -31,13 +29,12 @@ namespace SimMach.Sim {
             _runtime.Debug(message);
         }
 
-        readonly Dictionary<LinkId, SimLink> _links = new Dictionary<LinkId, SimLink>(LinkId.Comparer);
+        readonly Dictionary<RouteId, SimRoute> _routes = new Dictionary<RouteId, SimRoute>(RouteId.Comparer);
 
         readonly Dictionary<SimEndpoint, SimSocket> _sockets = new Dictionary<SimEndpoint, SimSocket>(SimEndpoint.Comparer);
 
         public void SendPacket(SimEndpoint from, SimEndpoint to, object message) {
-            _links[new LinkId(from.Machine, to.Machine)]
-                .Send(from, to, message);
+            _routes[new RouteId(from.Machine, to.Machine)].Send(from, to, message);
         }
 
 
@@ -54,7 +51,7 @@ namespace SimMach.Sim {
         
         
 
-        public async Task<ISocket> Listen(SimEnv proc, int port, TimeSpan timeout) {
+        public async Task<ISocket> Listen(SimProc proc, int port, TimeSpan timeout) {
             // socket is bound to the owner
             var endpoint = new SimEndpoint(proc.Id.Machine, port);
 
@@ -62,15 +59,15 @@ namespace SimMach.Sim {
                 throw new IOException($"Address {endpoint} in use");
             }
 
-            var socket = new SimSocket(proc, endpoint);
+            var socket = new SimSocket(proc, endpoint, this);
             _sockets.Add(endpoint, socket);
 
             return socket;
         }
 
-        public async Task<IConn> Connect(SimEnv process, SimEndpoint server) {
-            var linkId = new LinkId(process.Id.Machine, server.Machine);
-            if (!_links.TryGetValue(linkId, out var link)) {
+        public async Task<IConn> Connect(SimProc process, SimEndpoint server) {
+            var linkId = new RouteId(process.Id.Machine, server.Machine);
+            if (!_routes.TryGetValue(linkId, out var link)) {
                 throw new IOException($"Route not found: {linkId}");
             }
 
@@ -83,10 +80,10 @@ namespace SimMach.Sim {
             // if yes - then reuse
             
 
-            var clientSocket = new SimSocket(process, clientEndpoint);
+            var clientSocket = new SimSocket(process, clientEndpoint, this);
             _sockets.Add(clientEndpoint, clientSocket);
             
-            var conn = new SimConn(clientSocket, server, this, process);
+            var conn = new SimConn(clientSocket, server, process);
             
             clientSocket._connections.Add(server, conn);
             
@@ -101,8 +98,7 @@ namespace SimMach.Sim {
         // maintain and send connection ID;
         readonly SimSocket _socket;
         readonly SimEndpoint _remote;
-        readonly SimNetwork _link;
-        readonly SimEnv _env;
+        readonly SimProc _proc;
         
         
         SimFuture<object> _pendingRead;
@@ -113,11 +109,11 @@ namespace SimMach.Sim {
 
         static readonly object FIN = "FIN";
         
-        public SimConn(SimSocket socket, SimEndpoint remote, SimNetwork link, SimEnv env) {
+        public SimConn(SimSocket socket, SimEndpoint remote, SimProc proc) {
             _socket = socket;
             _remote = remote;
-            _link = link;
-            _env = env;
+            
+            _proc = proc;
         }
 
 
@@ -128,8 +124,8 @@ namespace SimMach.Sim {
             // we don't wait for the ACK.
             // but add latency for putting on the wire
             //await _env.Delay(1.Ms(), _env.Token);
-            
-            _link.SendPacket(_socket.Endpoint, _remote, message);
+
+            _socket.SendMessage(_remote, message);
         }
 
 
@@ -160,7 +156,7 @@ namespace SimMach.Sim {
                 return tuple;
             }
 
-            _pendingRead = _env.Promise<object>(timeout, _env.Token);
+            _pendingRead = _proc.Promise<object>(timeout, _proc.Token);
             var msg = await _pendingRead.Task;
 
             //_socket.Debug($"Receive {msg}");
@@ -173,7 +169,7 @@ namespace SimMach.Sim {
 
         public void Dispose() {
             if (!_closed) {
-                _link.SendPacket(_socket.Endpoint, _remote, FIN);
+                _socket.SendMessage(_remote, FIN);
                 Close("Dispose");
             }
 
@@ -198,9 +194,10 @@ namespace SimMach.Sim {
 
 
     sealed class SimSocket : ISocket {
-        readonly SimEnv _env;
-        public readonly SimEndpoint Endpoint;
-        
+        readonly SimProc _proc;
+        readonly SimEndpoint _endpoint;
+        readonly SimNetwork _net;
+
 
         public readonly Dictionary<SimEndpoint, SimConn> _connections =
             new Dictionary<SimEndpoint, SimConn>(SimEndpoint.Comparer);
@@ -209,13 +206,14 @@ namespace SimMach.Sim {
 
         SimFuture<IConn> _poll;
 
-        public SimSocket(SimEnv env, SimEndpoint endpoint) {
-            _env = env;
-            Endpoint = endpoint;
+        public SimSocket(SimProc proc, SimEndpoint endpoint, SimNetwork net) {
+            _proc = proc;
+            _endpoint = endpoint;
+            _net = net;
         }
 
         public void Debug(string message) {
-            _env.Debug(message);
+            _proc.Debug(message);
         }
 
         public Task<IConn> Accept() {
@@ -227,7 +225,7 @@ namespace SimMach.Sim {
                 throw new IOException("There is a wait already");
             }
 
-            _poll = _env.Promise<IConn>(Timeout.InfiniteTimeSpan, _env.Token);
+            _poll = _proc.Promise<IConn>(Timeout.InfiniteTimeSpan, _proc.Token);
             return _poll.Task;
         }
 
@@ -238,7 +236,7 @@ namespace SimMach.Sim {
                 return;
             }
             
-            conn = new SimConn(this, client, link,_env);
+            conn = new SimConn(this, client, _proc);
             
             _connections.Add(client, conn);
            
@@ -252,6 +250,10 @@ namespace SimMach.Sim {
         }
 
         public void Dispose() { }
+
+        public void SendMessage(SimEndpoint remote, object message) {
+            _net.SendPacket(_endpoint, remote, message);
+        }
     }
 
     sealed class SimEndpoint {
@@ -266,24 +268,24 @@ namespace SimMach.Sim {
             return $"{Machine}:{Port}";
         }
 
-        public static IEqualityComparer<SimEndpoint> Comparer = new DelegateComparer<SimEndpoint>(a => a.ToString());
+        public static readonly IEqualityComparer<SimEndpoint> Comparer = new DelegateComparer<SimEndpoint>(a => a.ToString());
     }
 
-    sealed class SimLink {
+    sealed class SimRoute {
         readonly SimNetwork _network;
-        readonly LinkId _link;
+        readonly RouteId _route;
         SimScheduler _scheduler;
         readonly TaskFactory _factory;
         
         public void Debug(string l) {
             
-            _network.Debug($"  {_link.Full,-34} {l}");
+            _network.Debug($"  {_route.Full,-34} {l}");
         }
 
-        public SimLink(SimScheduler scheduler, SimNetwork network, LinkId link) {
+        public SimRoute(SimScheduler scheduler, SimNetwork network, RouteId route) {
             _scheduler = scheduler;
             _network = network;
-            _link = link;
+            _route = route;
             _factory = new TaskFactory(_scheduler);
         }
 

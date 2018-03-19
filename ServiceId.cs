@@ -24,22 +24,22 @@ namespace SimMach {
     }
     
     public sealed class NetworkDef {
-        readonly Dictionary<LinkId, string> _dictionary = new Dictionary<LinkId, string>(LinkId.Comparer);
+        readonly Dictionary<RouteId, string> _dictionary = new Dictionary<RouteId, string>(RouteId.Comparer);
 
-        public ICollection<LinkId> Links => _dictionary.Keys;
+        public ICollection<RouteId> Links => _dictionary.Keys;
 
         public void Link(string client, string server) {
-            _dictionary.Add(new LinkId(client, server), null);
-            _dictionary.Add(new LinkId(server, client), null);
+            _dictionary.Add(new RouteId(client, server), null);
+            _dictionary.Add(new RouteId(server, client), null);
         }
         
         
     }
 
-    public class LinkId {
+    public class RouteId {
         public readonly string Client;
         public readonly string Server;
-        public LinkId(string client, string server) {
+        public RouteId(string client, string server) {
             Client = client;
             Server = server;
         }
@@ -50,7 +50,7 @@ namespace SimMach {
             return Full;
         }
 
-        public static readonly IEqualityComparer<LinkId> Comparer = new DelegateComparer<LinkId>(id => id.Full);
+        public static readonly IEqualityComparer<RouteId> Comparer = new DelegateComparer<RouteId>(id => id.Full);
     }
     
     public class ServiceId {

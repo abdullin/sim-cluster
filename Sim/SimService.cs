@@ -8,20 +8,20 @@ namespace SimMach.Sim {
     
     class SimService {
         public readonly ServiceId Id;
-        readonly Func<SimEnv, Task> _launcher;
+        readonly Func<SimProc, Task> _launcher;
         
         Task _task;
-        SimEnv _env;
+        SimProc _proc;
 
         public void Launch(Action<Task> done) {
             if (_task != null && !_task.IsCompleted) {
                 throw new InvalidOperationException($"Can't launch {Id} while previous instance is {_task.Status}");
             }
             
-            var env = new SimEnv(Id, _runtime);
+            var env = new SimProc(Id, _runtime);
             
             _task = _factory.StartNew(() => _launcher(env).ContinueWith(done)).Unwrap();
-            _env = env;
+            _proc = env;
 
         }
 
@@ -30,16 +30,16 @@ namespace SimMach.Sim {
                 return;
             }
 
-            _env.Cancel();
+            _proc.Cancel();
 
-            var finished = await Task.WhenAny(_task, _env.Delay(grace, CancellationToken.None));
+            var finished = await Task.WhenAny(_task, _proc.Delay(grace, CancellationToken.None));
             if (finished != _task) {
-                _env.Debug("Shutdown timeout. ERASING FUTURE to KILL");
+                _proc.Debug("Shutdown timeout. ERASING FUTURE to KILL");
                 _runtime.FutureQueue.Erase(_scheduler);
-                _env.Kill();
+                _proc.Kill();
             }
 
-            _env = null;
+            _proc = null;
             _task = null;
         }
 
@@ -48,7 +48,7 @@ namespace SimMach.Sim {
         readonly TaskFactory _factory;
         readonly SimRuntime _runtime;
 
-        public SimService(SimRuntime runtime, ServiceId id, Func<SimEnv, Task> launcher) {
+        public SimService(SimRuntime runtime, ServiceId id, Func<SimProc, Task> launcher) {
             Id = id;
             _launcher = launcher;
             _runtime = runtime;

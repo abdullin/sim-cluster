@@ -113,8 +113,6 @@ namespace SimMach.Sim {
 
             Assert.AreEqual(eventsToSend, eventsReceived);
             Assert.IsTrue(closed, nameof(closed));
-            
-            
         }
         
     }

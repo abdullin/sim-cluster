@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace SimMach.Sim {
-    class SimEnv : IEnv {
+    class SimProc : IEnv {
         
         public readonly ServiceId Id;
         readonly SimRuntime Runtime;
@@ -29,7 +29,7 @@ namespace SimMach.Sim {
             Runtime.RecordActivity();
         }
 
-        public SimEnv(ServiceId id, SimRuntime runtime) {
+        public SimProc(ServiceId id, SimRuntime runtime) {
             _cts = new CancellationTokenSource();
             Id = id;
             Runtime = runtime;
