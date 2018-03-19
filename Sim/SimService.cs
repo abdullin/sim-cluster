@@ -7,18 +7,32 @@ namespace SimMach.Sim {
     
     
     class SimService {
-        public readonly ServiceId Id;
+        readonly ServiceId _id;
         readonly Func<SimProc, Task> _launcher;
         
         Task _task;
         SimProc _proc;
+        
+        
+        readonly SimScheduler _scheduler;
+        readonly TaskFactory _factory;
+        readonly SimRuntime _runtime;
+
+        public SimService(SimRuntime runtime, ServiceId id, Func<SimProc, Task> launcher) {
+            _id = id;
+            _launcher = launcher;
+            _runtime = runtime;
+            
+            _scheduler = new SimScheduler(runtime, id);
+            _factory = new TaskFactory(_scheduler);
+        }
 
         public void Launch(Action<Task> done) {
             if (_task != null && !_task.IsCompleted) {
-                throw new InvalidOperationException($"Can't launch {Id} while previous instance is {_task.Status}");
+                throw new InvalidOperationException($"Can't launch {_id} while previous instance is {_task.Status}");
             }
             
-            var env = new SimProc(Id, _runtime);
+            var env = new SimProc(_id, _runtime, _runtime.NextProcID(), _factory);
             
             _task = _factory.StartNew(() => _launcher(env).ContinueWith(done)).Unwrap();
             _proc = env;
@@ -44,18 +58,7 @@ namespace SimMach.Sim {
         }
 
 
-        readonly SimScheduler _scheduler;
-        readonly TaskFactory _factory;
-        readonly SimRuntime _runtime;
-
-        public SimService(SimRuntime runtime, ServiceId id, Func<SimProc, Task> launcher) {
-            Id = id;
-            _launcher = launcher;
-            _runtime = runtime;
-            
-            _scheduler = new SimScheduler(runtime, id);
-            _factory = new TaskFactory(_scheduler);
-        }
+     
         
     }
 }

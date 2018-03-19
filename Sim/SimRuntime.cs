@@ -10,6 +10,11 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace SimMach.Sim {
+
+    
+    
+
+
     class SimRuntime : ISimPlan {
         public readonly Dictionary<ServiceId, SimService> Services;
         public readonly SimNetwork Network;
@@ -30,7 +35,16 @@ namespace SimMach.Sim {
         public long MaxSteps = long.MaxValue;
         
         long _maxInactiveTicks = TimeSpan.FromSeconds(60).Ticks;
-        
+
+        int _procs;
+        public int NextProcID() {
+            return ++_procs;
+        }
+
+        int _traces;
+
+
+        public readonly Tracer Tracer;
         public readonly SimFutureQueue FutureQueue = new SimFutureQueue();
 
         // system schedulers
@@ -43,6 +57,7 @@ namespace SimMach.Sim {
             
             _scheduler = new SimScheduler(this,new ServiceId("simulation:proc"));
             _factory = new TaskFactory(_scheduler);
+            Tracer = new Tracer(() => _time);
         }
 
         
@@ -103,8 +118,10 @@ namespace SimMach.Sim {
 
         Exception _halt;
 
-        public void Run() {
+        public void Run(Stream trace = null) {
             _halt = null;
+
+            Tracer.Start(trace);
             
             var watch = Stopwatch.StartNew();
             var reason = "none";
@@ -166,7 +183,7 @@ namespace SimMach.Sim {
             var factor = softTime.TotalHours / watch.Elapsed.TotalHours;
             Debug($"{reason.ToUpper()}");
             //Console.WriteLine("Simulation parameters:");
-            
+            Tracer.Finish();
 
             if (_halt != null) {
                 Console.WriteLine(_halt.Demystify());

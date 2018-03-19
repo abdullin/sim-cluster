@@ -29,6 +29,10 @@ namespace SimMach.Sim {
             _runtime.Debug(message);
         }
 
+        public TracePoint Trace(string name) {
+            return _runtime.Tracer.Scope(0, name, "net");
+        }
+
         readonly Dictionary<RouteId, SimRoute> _routes = new Dictionary<RouteId, SimRoute>(RouteId.Comparer);
 
         readonly Dictionary<SimEndpoint, SimSocket> _sockets = new Dictionary<SimEndpoint, SimSocket>(SimEndpoint.Comparer);
@@ -46,7 +50,7 @@ namespace SimMach.Sim {
             }
              // https://eklitzke.org/how-tcp-sockets-work
             
-            socket.Deliver(msg, from, this);
+            socket.Deliver(msg, from);
         }
         
         
@@ -82,14 +86,21 @@ namespace SimMach.Sim {
 
             var clientSocket = new SimSocket(process, clientEndpoint, this);
             _sockets.Add(clientEndpoint, clientSocket);
+
             
             var conn = new SimConn(clientSocket, server, process);
             
             clientSocket._connections.Add(server, conn);
             
-            await conn.Write("SYN");
             
-            return conn;
+            // handshake
+            await conn.Write("SYN");
+            await conn.Read(5.Sec());
+            await conn.Write("ACK");
+            
+            return new ClientConn(conn, process);
+            
+            
         }
     }
     
@@ -106,13 +117,9 @@ namespace SimMach.Sim {
 
         readonly Queue<object> _incoming = new Queue<object>();
 
-
-        static readonly object FIN = "FIN";
-        
         public SimConn(SimSocket socket, SimEndpoint remote, SimProc proc) {
             _socket = socket;
             _remote = remote;
-            
             _proc = proc;
         }
 
@@ -132,7 +139,7 @@ namespace SimMach.Sim {
         bool _closed;
 
         bool NextIsFin() {
-            return _incoming.Count == 1 && _incoming.Peek() == FIN;
+            return _incoming.Count == 1 && _incoming.Peek() == SimTcp.FIN;
         }
 
 
@@ -146,32 +153,40 @@ namespace SimMach.Sim {
             if (_closed) {
                 throw new IOException("Socket closed");
             }
-            
+
+
+
             if (_incoming.TryDequeue(out var tuple)) {
 
                 if (NextIsFin()) {
-                    Close("FIN");
+                    Close(SimTcp.FIN);
                 }
-                
+
                 return tuple;
             }
 
             _pendingRead = _proc.Promise<object>(timeout, _proc.Token);
+
+
             var msg = await _pendingRead.Task;
 
             //_socket.Debug($"Receive {msg}");
-            
+
             if (NextIsFin()) {
                 Close("FIN");
             }
+
             return msg;
+
         }
 
         public void Dispose() {
             if (!_closed) {
-                _socket.SendMessage(_remote, FIN);
+                _socket.SendMessage(_remote, SimTcp.FIN);
                 Close("Dispose");
             }
+            
+            
 
             // drop socket on dispose
         }
@@ -190,6 +205,13 @@ namespace SimMach.Sim {
         Task<IConn> Accept();
     }
 
+    public static class SimTcp {
+        public static readonly string SYN = "SYN";
+        public static readonly string FIN = "FIN";
+        public static readonly string ACK = "ACK";
+        public static readonly string SYN_ACK = "SYN_ACK";
+    }
+
 
 
 
@@ -197,12 +219,13 @@ namespace SimMach.Sim {
         readonly SimProc _proc;
         readonly SimEndpoint _endpoint;
         readonly SimNetwork _net;
+        
 
 
         public readonly Dictionary<SimEndpoint, SimConn> _connections =
             new Dictionary<SimEndpoint, SimConn>(SimEndpoint.Comparer);
 
-        readonly Queue<SimConn> _incoming = new Queue<SimConn>();
+        readonly Queue<IConn> _incoming = new Queue<IConn>();
 
         SimFuture<IConn> _poll;
 
@@ -229,24 +252,40 @@ namespace SimMach.Sim {
             return _poll.Task;
         }
 
-        public void Deliver(object msg, SimEndpoint client, SimNetwork link) {
+        public void Deliver(object msg, SimEndpoint client) {
             
             if (_connections.TryGetValue(client, out var conn)) {
                 conn.Deliver(msg);
                 return;
             }
+
+            if (msg != SimTcp.SYN) {
+                Debug("Non-SYN packet was dropped");
+                return;
+            }
+            
+            
             
             conn = new SimConn(this, client, _proc);
-            
             _connections.Add(client, conn);
-           
-
-            if (_poll != null) {
-                _poll.SetResult(conn);
-                _poll = null;
-            } else {
-                _incoming.Enqueue(conn);    
-            }
+            
+            _proc.Schedule(async () => {
+                await conn.Write(SimTcp.SYN_ACK);
+                if (SimTcp.ACK != await conn.Read(5.Sec())) {
+                    Debug("Non ACK packet received");
+                    _connections.Remove(client);
+                    return;
+                }
+                
+                var ready = new ClientConn(conn, _proc);
+            
+                if (_poll != null) {
+                    _poll.SetResult(ready);
+                    _poll = null;
+                } else {
+                    _incoming.Enqueue(ready);    
+                }
+            });
         }
 
         public void Dispose() { }
@@ -290,13 +329,15 @@ namespace SimMach.Sim {
         }
 
         public Task Send(SimEndpoint client, SimEndpoint server, object msg) {
+            var text = $"{msg ?? "null"}";
+            Debug("Send " + text);
             // TODO: network cancellation
             _factory.StartNew(async () => {
                 // delivery wait
-                Debug($"Send {msg ?? "null"}");
-                await SimDelayTask.Delay(50);
-                
-                _network.InternalDeliver(client, server, msg);
+            
+                    await SimDelayTask.Delay(50);
+                    _network.InternalDeliver(client, server, msg);
+            
             });
             return Task.FromResult(true);
         }

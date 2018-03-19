@@ -16,10 +16,10 @@ namespace SimMach.Sim {
             var requests = new List<object>();
             var responses = new List<object>();
 
-            run.Net.Link("client", "server");
+            run.Net.Link("localhost", "api.eu-west");
 
-            run.Services.Add("client:service", async env => {
-                using (var conn = await env.Connect("server", 80)) {
+            run.Services.Add("localhost:console", async env => {
+                using (var conn = await env.Connect("api.eu-west", 80)) {
                     await conn.Write("Hello");
                     responses.Add(await conn.Read(5.Sec()));
                 }
@@ -32,10 +32,10 @@ namespace SimMach.Sim {
                 }
             }
 
-            run.Services.Add("server:service", async env => {
-                using (var sock = await env.Listen(80)) {
+            run.Services.Add("api.eu-west:engine", async env => {
+                using (var socket = await env.Listen(80)) {
                     while (!env.Token.IsCancellationRequested) {
-                        var conn = await sock.Accept();
+                        var conn = await socket.Accept();
                         Handler(conn);
                     }
                 }
@@ -56,16 +56,17 @@ namespace SimMach.Sim {
             var run = new TestRuntime() {
                 MaxTime = 2.Minutes(),
                 DebugNetwork = true,
+                TraceFile = "/Users/rinat/proj/core/SimMach/traces/trace.json"
             };
 
 
             int eventsReceived = 0;
             int eventsToSend = 5;
             bool closed = false;
-            run.Net.Link("client", "server");
+            run.Net.Link("localhost", "api");
 
-            run.Services.Add("client:service", async env => {
-                using (var conn = await env.Connect("server", 80)) {
+            run.Services.Add("localhost:console", async env => {
+                using (var conn = await env.Connect("api", 80)) {
                     env.Debug("Subscribing");
                     await conn.Write("SUBSCRIBE");
 
@@ -86,7 +87,7 @@ namespace SimMach.Sim {
                 }
             });
 
-            run.Services.Add("server:service", async env => {
+            run.Services.Add("api:engine", async env => {
                 
                 async void Handler(IConn conn) {
                     using (conn) {
@@ -114,6 +115,5 @@ namespace SimMach.Sim {
             Assert.AreEqual(eventsToSend, eventsReceived);
             Assert.IsTrue(closed, nameof(closed));
         }
-        
     }
 }

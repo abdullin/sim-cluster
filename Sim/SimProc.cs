@@ -3,8 +3,12 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace SimMach.Sim {
+
+   
+    
     class SimProc : IEnv {
-        
+        readonly int _procId;
+        readonly TaskFactory _scheduler;
         public readonly ServiceId Id;
         readonly SimRuntime Runtime;
         
@@ -12,6 +16,13 @@ namespace SimMach.Sim {
         readonly CancellationTokenSource _cts;
 
         public CancellationToken Token => _cts.Token;
+
+
+
+
+       
+        
+        
         public Task Delay(int i, CancellationToken token ) {
             return SimDelayTask.Delay(i, token);
         }
@@ -29,10 +40,16 @@ namespace SimMach.Sim {
             Runtime.RecordActivity();
         }
 
-        public SimProc(ServiceId id, SimRuntime runtime) {
+        public SimProc(ServiceId id, SimRuntime runtime, int procId, TaskFactory scheduler) {
             _cts = new CancellationTokenSource();
             Id = id;
             Runtime = runtime;
+            _procId = procId;
+            _scheduler = scheduler;
+        }
+
+        public void Schedule(Func<Task> action) {
+            _scheduler.StartNew(action);
         }
 
         public void Cancel() {
@@ -48,10 +65,13 @@ namespace SimMach.Sim {
 
         public TimeSpan Time => Runtime.Time;
         
-        public Task<IConn> Connect(string endpoint, int port) {
+        public async Task<IConn> Connect(string endpoint, int port) {
             var server = new SimEndpoint(endpoint, port);
-            
-            return Runtime.Connect(this, server);
+
+            using (TraceScope($"Connect to {server}")) {
+                return await Runtime.Connect(this, server);
+            }
+
         }
 
         public Task<ISocket> Listen(int port, TimeSpan timeout) {
@@ -62,6 +82,14 @@ namespace SimMach.Sim {
         public void Debug(string l) {
             Runtime.Debug($"  {Id.Machine,-13} {Id.Service,-20} {l}");
         }
-       
+
+        public void Instant(string message) {
+            Runtime.Tracer.Instant(_procId, message, "proc");
+        }
+        
+        public TracePoint TraceScope(string name) {
+            return Runtime.Tracer.Scope(_procId, name, "proc");
+        }
+
     }
 }

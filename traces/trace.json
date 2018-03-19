@@ -1,0 +1,25 @@
+[
+{"cat":"proc", "name":"Connect to api:80","ph":"B","pid":1,"ts":0,"id":1}
+,{"cat":"proc", "name":"Connect to api:80","ph":"E","pid":1,"ts":100000,"id":1}
+,{"cat":"proc", "name":"SUBSCRIBE","ph":"i","pid":1,"ts":100000,"s":"p"}
+,{"cat":"proc", "name":"Read","ph":"B","pid":1,"ts":100000,"id":2}
+,{"cat":"proc", "name":"Read","ph":"B","pid":2,"ts":150000,"id":3}
+,{"cat":"proc", "name":"Read","ph":"E","pid":2,"ts":150000,"id":3}
+,{"cat":"proc", "name":"Event 0","ph":"i","pid":2,"ts":160000,"s":"p"}
+,{"cat":"proc", "name":"Event 1","ph":"i","pid":2,"ts":170000,"s":"p"}
+,{"cat":"proc", "name":"Event 2","ph":"i","pid":2,"ts":180000,"s":"p"}
+,{"cat":"proc", "name":"Event 3","ph":"i","pid":2,"ts":190000,"s":"p"}
+,{"cat":"proc", "name":"Event 4","ph":"i","pid":2,"ts":200000,"s":"p"}
+,{"cat":"proc", "name":"END_STREAM","ph":"i","pid":2,"ts":200000,"s":"p"}
+,{"cat":"proc", "name":"Read","ph":"E","pid":1,"ts":210000,"id":2}
+,{"cat":"proc", "name":"Read","ph":"B","pid":1,"ts":210000,"id":4}
+,{"cat":"proc", "name":"Read","ph":"E","pid":1,"ts":220000,"id":4}
+,{"cat":"proc", "name":"Read","ph":"B","pid":1,"ts":220000,"id":5}
+,{"cat":"proc", "name":"Read","ph":"E","pid":1,"ts":230000,"id":5}
+,{"cat":"proc", "name":"Read","ph":"B","pid":1,"ts":230000,"id":6}
+,{"cat":"proc", "name":"Read","ph":"E","pid":1,"ts":240000,"id":6}
+,{"cat":"proc", "name":"Read","ph":"B","pid":1,"ts":240000,"id":7}
+,{"cat":"proc", "name":"Read","ph":"E","pid":1,"ts":250000,"id":7}
+,{"cat":"proc", "name":"Read","ph":"B","pid":1,"ts":250000,"id":8}
+,{"cat":"proc", "name":"Read","ph":"E","pid":1,"ts":250000,"id":8}
+]
