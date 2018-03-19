@@ -17,20 +17,34 @@ namespace SimMach.Sim {
             var requests = new List<object>();
             var responses = new List<object>();
 
-            run.Net.Link("localhost", "api");
+            run.Net.Link("localhost", "proxy");
+            run.Net.Link("proxy", "server");
 
             run.Services.Add("localhost:console", async env => {
-                using (var conn = await env.Connect("api", 80)) {
-                    env.Debug("Running");
+                using (var conn = await env.Connect("proxy", 80)) {
                     await conn.Write("Hello");
                     var response = await conn.Read(5.Sec());
                     responses.Add(response);
                 }
             });
-
-            
-
-            run.Services.Add("api:engine", async env => {
+            run.Services.Add("proxy:engine", async env => {
+                async void Handler(IConn conn) {
+                    using (conn) {
+                        var msg = await conn.Read(5.Sec());
+                        using (var outgoing = await env.Connect("server", 80)) {
+                            await outgoing.Write(msg);
+                            var response = await outgoing.Read(5.Sec());
+                            await conn.Write(response);
+                        }
+                    }
+                }
+                using (var socket = await env.Bind(80)) {
+                    while (!env.Token.IsCancellationRequested) {
+                        Handler(await socket.Accept());
+                    }
+                }
+            });
+            run.Services.Add("server:engine", async env => {
                 async void Handler(IConn conn) {
                     using (conn) {
                         var msg = await conn.Read(5.Sec());
@@ -40,11 +54,9 @@ namespace SimMach.Sim {
                 }
                 using (var socket = await env.Bind(80)) {
                     while (!env.Token.IsCancellationRequested) {
-                        var conn = await socket.Accept();
-                        Handler(conn);
+                        Handler(await socket.Accept());
                     }
                 }
-                
             });
 
             run.RunAll();

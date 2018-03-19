@@ -1,8 +1,0 @@
-[{"cat":"foo","name": "url_request", "ph": "b", "ts": "0", "id": 100, "pid":1},
-{"cat":"foo","name": "url_headers", "ph": "b", "ts": "1", "id": 100, "pid":1},
-{"cat":"foo","name": "http_cache", "ph": "n", "ts": "3", "id": 100, "pid":1},
-{"cat":"foo","name": "url_headers", "ph": "e", "ts": "2", "id": 100, "pid": 1 },
-{"cat":"foo","name": "url_request", "ph": "e", "ts": "4", "id": 100, "pid":1},
-{"name": "firstLayout", "ts": 10, "ph": "R", "cat": "blink.user_timing",  "pid": 42, "tid": 983}
-
-]

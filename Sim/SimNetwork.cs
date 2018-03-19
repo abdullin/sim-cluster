@@ -35,8 +35,8 @@ namespace SimMach.Sim {
         }
 
         readonly Dictionary<RouteId, SimRoute> _routes = new Dictionary<RouteId, SimRoute>(RouteId.Comparer);
-
         readonly Dictionary<SimEndpoint, SimSocket> _sockets = new Dictionary<SimEndpoint, SimSocket>(SimEndpoint.Comparer);
+        
 
         public void SendPacket(SimEndpoint from, SimEndpoint to, SimPacket message) {
             _routes[new RouteId(from.Machine, to.Machine)].Send(from, to, message);
@@ -70,6 +70,8 @@ namespace SimMach.Sim {
             return socket;
         }
 
+        int _socketId = 1000;
+
         public async Task<IConn> Connect(SimProc process, SimEndpoint server) {
             var linkId = new RouteId(process.Id.Machine, server.Machine);
             if (!_routes.TryGetValue(linkId, out var link)) {
@@ -79,7 +81,7 @@ namespace SimMach.Sim {
             
             // todo: allocate port
             // todo: allow Azure SNAT delay scenario
-            var clientEndpoint = new SimEndpoint(process.Id.Machine, 999);
+            var clientEndpoint = new SimEndpoint(process.Id.Machine, _socketId ++);
             
             // do we have a real connection already?
             // if yes - then reuse
