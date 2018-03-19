@@ -101,7 +101,7 @@ namespace SimMach.Sim {
             await conn.Read(5.Sec());
             await conn.Write("ACK");
             
-            return new ClientConn(conn, process);
+            return new ClientConn(conn);
             
             
         }
@@ -109,23 +109,20 @@ namespace SimMach.Sim {
 
     public class SimPacket {
         public readonly object Payload;
-        public readonly int Seq;
+        public readonly int SeqNumber;
 
-        public SimPacket(object payload, int seq) {
+        public SimPacket(object payload, int seqNumber) {
             Payload = payload;
-            Seq = seq;
+            SeqNumber = seqNumber;
         }
     }
     
     class SimConn  {
 
         // maintain and send connection ID;
-        public readonly SimSocket Socket;
-        public readonly SimEndpoint Remote;
-        
+        readonly SimSocket _socket;
+        readonly SimEndpoint _remote;
         readonly SimProc _proc;
-
-
         int _sequence;
         
         SimFuture<SimPacket> _pendingRead;
@@ -134,15 +131,10 @@ namespace SimMach.Sim {
         readonly Queue<SimPacket> _incoming = new Queue<SimPacket>();
 
         public SimConn(SimSocket socket, SimEndpoint remote, SimProc proc) {
-            Socket = socket;
-            Remote = remote;
+            _socket = socket;
+            _remote = remote;
             _proc = proc;
         }
-
-        public int OutgoingSequence => _sequence;
-        public int LastAck => _ackSequence;
-
-        int _ackSequence;
 
         public async Task Write(object message) {
             if (_closed) {
@@ -152,14 +144,14 @@ namespace SimMach.Sim {
             // but add latency for putting on the wire
             //await _env.Delay(1.Ms(), _env.Token);
             
-            var id = $"{Socket.Endpoint}->{Remote}|{OutgoingSequence}";
+            var id = $"{_socket.Endpoint}->{_remote}|{_sequence}";
 
             using (_proc.TraceScope("Write")) {
                 await _proc.Delay(1, _proc.Token);
                 _proc.FlowStart(message.ToString(), id.GetHashCode().ToString());
             }
 
-            Socket.SendMessage(Remote, new SimPacket(message, _sequence));
+            _socket.SendMessage(_remote, new SimPacket(message, _sequence));
             _sequence++;
         }
 
@@ -177,7 +169,7 @@ namespace SimMach.Sim {
         }
 
         public async Task TraceRead(SimPacket msg) {
-            var id = $"{Remote}->{Socket.Endpoint}|{msg.Seq}";
+            var id = $"{_remote}->{_socket.Endpoint}|{msg.SeqNumber}";
             _proc.FlowEnd(msg.Payload.ToString(), id.GetHashCode().ToString());
             using (_proc.TraceScope("Read")) {
                 await _proc.Delay(1, _proc.Token);
@@ -190,8 +182,6 @@ namespace SimMach.Sim {
                 throw new IOException("Socket closed");
             }
 
-
-
             if (_incoming.TryDequeue(out var tuple)) {
 
                 if (NextIsFin()) {
@@ -199,9 +189,6 @@ namespace SimMach.Sim {
                 }
 
                 await TraceRead(tuple);
-
-                _ackSequence = tuple.Seq;
-
                 return tuple.Payload;
             }
 
@@ -209,10 +196,7 @@ namespace SimMach.Sim {
 
 
             var msg = await _pendingRead.Task;
-            _ackSequence = msg.Seq;
-
-            //_socket.Debug($"Receive {msg}");
-
+            
             if (NextIsFin()) {
                 Close("FIN");
             }
@@ -245,28 +229,22 @@ namespace SimMach.Sim {
     }
     
     sealed class ClientConn : IConn {
-        public ClientConn(SimConn conn, SimProc proc) {
+        public ClientConn(SimConn conn) {
             _conn = conn;
-            _proc = proc;
         }
 
         readonly SimConn _conn;
-        readonly SimProc _proc;
+        
         public void Dispose() {
             _conn.Dispose();
         }
 
         public async Task Write(object message) {
-            
-
-          
             await _conn.Write(message);
         }
 
         public async Task<object> Read(TimeSpan timeout) {
             return await _conn.Read(timeout);
-            
-
         }
     }
 
@@ -334,8 +312,6 @@ namespace SimMach.Sim {
                 return;
             }
             
-            
-            
             conn = new SimConn(this, client, _proc);
             conn.TraceRead(msg);
             _connections.Add(client, conn);
@@ -348,7 +324,7 @@ namespace SimMach.Sim {
                     return;
                 }
                 
-                var ready = new ClientConn(conn, _proc);
+                var ready = new ClientConn(conn);
             
                 if (_poll != null) {
                     _poll.SetResult(ready);
