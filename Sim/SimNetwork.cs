@@ -29,23 +29,24 @@ namespace SimMach.Sim {
             _runtime.Debug(message);
         }
 
-        public TracePoint Trace(string name) {
-            return _runtime.Tracer.Scope(0, name, "net");
+        public TracePoint Trace(SimEndpoint client, SimEndpoint server, SimPacket pack) {
+            return TracePoint.None;
+            //return _runtime.Tracer.TracePacket(client, server, pack);
         }
 
         readonly Dictionary<RouteId, SimRoute> _routes = new Dictionary<RouteId, SimRoute>(RouteId.Comparer);
 
         readonly Dictionary<SimEndpoint, SimSocket> _sockets = new Dictionary<SimEndpoint, SimSocket>(SimEndpoint.Comparer);
 
-        public void SendPacket(SimEndpoint from, SimEndpoint to, object message) {
+        public void SendPacket(SimEndpoint from, SimEndpoint to, SimPacket message) {
             _routes[new RouteId(from.Machine, to.Machine)].Send(from, to, message);
         }
 
 
-        public void InternalDeliver(SimEndpoint from, SimEndpoint to, object msg) {
+        public void InternalDeliver(SimEndpoint from, SimEndpoint to, SimPacket msg) {
             if (!_sockets.TryGetValue(to, out var socket)) {
                 // socket not bound
-                SendPacket(from, to, new IOException("Socket not found"));
+                SendPacket(from, to, new SimPacket(new IOException("Socket not found"),0));
                 return;
             }
              // https://eklitzke.org/how-tcp-sockets-work
@@ -55,7 +56,7 @@ namespace SimMach.Sim {
         
         
 
-        public async Task<ISocket> Listen(SimProc proc, int port, TimeSpan timeout) {
+        public async Task<ISocket> Bind(SimProc proc, int port, TimeSpan timeout) {
             // socket is bound to the owner
             var endpoint = new SimEndpoint(proc.Id.Machine, port);
 
@@ -103,26 +104,43 @@ namespace SimMach.Sim {
             
         }
     }
+
+    public class SimPacket {
+        public readonly object Payload;
+        public readonly int Seq;
+
+        public SimPacket(object payload, int seq) {
+            Payload = payload;
+            Seq = seq;
+        }
+    }
     
-    class SimConn : IConn {
+    class SimConn  {
 
         // maintain and send connection ID;
-        readonly SimSocket _socket;
-        readonly SimEndpoint _remote;
+        public readonly SimSocket Socket;
+        public readonly SimEndpoint Remote;
+        
         readonly SimProc _proc;
+
+
+        int _sequence;
         
-        
-        SimFuture<object> _pendingRead;
+        SimFuture<SimPacket> _pendingRead;
         
 
-        readonly Queue<object> _incoming = new Queue<object>();
+        readonly Queue<SimPacket> _incoming = new Queue<SimPacket>();
 
         public SimConn(SimSocket socket, SimEndpoint remote, SimProc proc) {
-            _socket = socket;
-            _remote = remote;
+            Socket = socket;
+            Remote = remote;
             _proc = proc;
         }
 
+        public int OutgoingSequence => _sequence;
+        public int LastAck => _ackSequence;
+
+        int _ackSequence;
 
         public async Task Write(object message) {
             if (_closed) {
@@ -132,14 +150,15 @@ namespace SimMach.Sim {
             // but add latency for putting on the wire
             //await _env.Delay(1.Ms(), _env.Token);
 
-            _socket.SendMessage(_remote, message);
+            Socket.SendMessage(Remote, new SimPacket(message, _sequence));
+            _sequence++;
         }
 
 
         bool _closed;
 
         bool NextIsFin() {
-            return _incoming.Count == 1 && _incoming.Peek() == SimTcp.FIN;
+            return _incoming.Count == 1 && _incoming.Peek().Payload == SimTcp.FIN;
         }
 
 
@@ -162,13 +181,16 @@ namespace SimMach.Sim {
                     Close(SimTcp.FIN);
                 }
 
-                return tuple;
+                _ackSequence = tuple.Seq;
+
+                return tuple.Payload;
             }
 
-            _pendingRead = _proc.Promise<object>(timeout, _proc.Token);
+            _pendingRead = _proc.Promise<SimPacket>(timeout, _proc.Token);
 
 
             var msg = await _pendingRead.Task;
+            _ackSequence = msg.Seq;
 
             //_socket.Debug($"Receive {msg}");
 
@@ -176,13 +198,13 @@ namespace SimMach.Sim {
                 Close("FIN");
             }
 
-            return msg;
+            return msg.Payload;
 
         }
 
         public void Dispose() {
             if (!_closed) {
-                _socket.SendMessage(_remote, SimTcp.FIN);
+                Write(SimTcp.FIN);
                 Close("Dispose");
             }
             
@@ -191,7 +213,7 @@ namespace SimMach.Sim {
             // drop socket on dispose
         }
 
-        public void Deliver(object msg) {
+        public void Deliver(SimPacket msg) {
             if (_pendingRead != null) {
                 _pendingRead.SetResult(msg);
                 _pendingRead = null;
@@ -200,6 +222,47 @@ namespace SimMach.Sim {
             }
         }
     }
+    
+    sealed class ClientConn : IConn {
+        public ClientConn(SimConn conn, SimProc proc) {
+            _conn = conn;
+            _proc = proc;
+        }
+
+        readonly SimConn _conn;
+        readonly SimProc _proc;
+        public void Dispose() {
+            _conn.Dispose();
+        }
+
+        public async Task Write(object message) {
+            
+
+            var id = $"{_conn.Socket.Endpoint}->{_conn.Remote}|{_conn.OutgoingSequence}";
+
+            using (_proc.TraceScope("Write")) {
+                await _proc.Delay(1, _proc.Token);
+                _proc.FlowStart(message.ToString(), id.GetHashCode().ToString());
+            }
+            await _conn.Write(message);
+        }
+
+        public async Task<object> Read(TimeSpan timeout) {
+            var msg = await _conn.Read(timeout);
+            var id = $"{_conn.Remote}->{_conn.Socket.Endpoint}|{_conn.LastAck}";
+            _proc.FlowEnd(msg.ToString(), id.GetHashCode().ToString());
+            using (_proc.TraceScope("Read")) {
+                await _proc.Delay(1, _proc.Token);
+            }
+            
+            
+            // deserialization overhead. Also to indicate
+            //_proc.Instant(msg.ToString());
+            return msg;
+
+        }
+    }
+
 
     public interface ISocket : IDisposable {
         Task<IConn> Accept();
@@ -217,7 +280,7 @@ namespace SimMach.Sim {
 
     sealed class SimSocket : ISocket {
         readonly SimProc _proc;
-        readonly SimEndpoint _endpoint;
+        public readonly SimEndpoint Endpoint;
         readonly SimNetwork _net;
         
 
@@ -231,7 +294,7 @@ namespace SimMach.Sim {
 
         public SimSocket(SimProc proc, SimEndpoint endpoint, SimNetwork net) {
             _proc = proc;
-            _endpoint = endpoint;
+            Endpoint = endpoint;
             _net = net;
         }
 
@@ -252,14 +315,14 @@ namespace SimMach.Sim {
             return _poll.Task;
         }
 
-        public void Deliver(object msg, SimEndpoint client) {
+        public void Deliver(SimPacket msg, SimEndpoint client) {
             
             if (_connections.TryGetValue(client, out var conn)) {
                 conn.Deliver(msg);
                 return;
             }
 
-            if (msg != SimTcp.SYN) {
+            if (msg.Payload != SimTcp.SYN) {
                 Debug("Non-SYN packet was dropped");
                 return;
             }
@@ -290,12 +353,12 @@ namespace SimMach.Sim {
 
         public void Dispose() { }
 
-        public void SendMessage(SimEndpoint remote, object message) {
-            _net.SendPacket(_endpoint, remote, message);
+        public void SendMessage(SimEndpoint remote, SimPacket message) {
+            _net.SendPacket(Endpoint, remote, message);
         }
     }
 
-    sealed class SimEndpoint {
+    public sealed class SimEndpoint {
         public readonly string Machine;
         public readonly int Port;
         public SimEndpoint(string machine, int port) {
@@ -328,16 +391,19 @@ namespace SimMach.Sim {
             _factory = new TaskFactory(_scheduler);
         }
 
-        public Task Send(SimEndpoint client, SimEndpoint server, object msg) {
-            var text = $"{msg ?? "null"}";
+        public Task Send(SimEndpoint client, SimEndpoint server, SimPacket msg) {
+            var text = $"{msg.Payload ?? "null"}";
             Debug("Send " + text);
             // TODO: network cancellation
             _factory.StartNew(async () => {
-                // delivery wait
-            
+                using (_network.Trace(client, server, msg)) {
+                    // delivery wait
+
+
                     await SimDelayTask.Delay(50);
                     _network.InternalDeliver(client, server, msg);
-            
+                }
+
             });
             return Task.FromResult(true);
         }

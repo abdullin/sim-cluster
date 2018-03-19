@@ -24,7 +24,7 @@ namespace SimMach
             test.Services.Add("com:test", async env => {
                 bootCount++;
                 while (!env.Token.IsCancellationRequested) {
-                    await env.SimulateWork(100);
+                    await env.SimulateWork("work",100.Ms());
                 }
             });
             

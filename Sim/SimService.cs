@@ -31,8 +31,10 @@ namespace SimMach.Sim {
             if (_task != null && !_task.IsCompleted) {
                 throw new InvalidOperationException($"Can't launch {_id} while previous instance is {_task.Status}");
             }
-            
-            var env = new SimProc(_id, _runtime, _runtime.NextProcID(), _factory);
+
+            var procID = _runtime.NextProcID();
+            var env = new SimProc(_id, _runtime, procID, _factory);
+            _runtime.Tracer.ProcessName(procID, _id.ToString());
             
             _task = _factory.StartNew(() => _launcher(env).ContinueWith(done)).Unwrap();
             _proc = env;

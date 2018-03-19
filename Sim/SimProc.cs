@@ -34,9 +34,12 @@ namespace SimMach.Sim {
             return new SimFuture<T>(timeout, token);
         }
 
-        public async Task SimulateWork(int ms, CancellationToken token) {
+        public async Task SimulateWork(string name,TimeSpan ms, CancellationToken token) {
             Runtime.RecordActivity();
-            await SimDelayTask.Delay(ms, token);
+            using (TraceScope(name)) {
+                await SimDelayTask.Delay(ms, token);
+            }
+
             Runtime.RecordActivity();
         }
 
@@ -74,8 +77,10 @@ namespace SimMach.Sim {
 
         }
 
-        public Task<ISocket> Listen(int port, TimeSpan timeout) {
-            return Runtime.Listen(this, port, timeout);
+        public async Task<ISocket> Listen(int port, TimeSpan timeout) {
+            using (Runtime.Tracer.SyncScope(_procId, "Bind", "proc")) {
+                return await Runtime.Bind(this, port, timeout);
+            }
         }
 
 
@@ -86,9 +91,17 @@ namespace SimMach.Sim {
         public void Instant(string message) {
             Runtime.Tracer.Instant(_procId, message, "proc");
         }
+
+        public void FlowStart(string flow, string id) {
+            Runtime.Tracer.FlowStart(_procId, flow, "proc", id);
+        }
+        
+        public void FlowEnd(string flow, string id) {
+            Runtime.Tracer.FlowEnd(_procId, flow, "proc", id);
+        }
         
         public TracePoint TraceScope(string name) {
-            return Runtime.Tracer.Scope(_procId, name, "proc");
+            return Runtime.Tracer.SyncScope(_procId, name, "proc");
         }
 
     }

@@ -9,31 +9,36 @@ namespace SimMach.Sim {
         [Test]
         public void RequestReplyTest() {
             var run = new TestRuntime() {
-                MaxTime = TimeSpan.FromMinutes(2),
+                MaxTime = 2.Minutes(),
                 DebugNetwork = true,
+                TraceFile = "/Users/rinat/proj/core/SimMach/traces/trace.json"
             };
 
             var requests = new List<object>();
             var responses = new List<object>();
 
-            run.Net.Link("localhost", "api.eu-west");
+            run.Net.Link("localhost", "api");
 
             run.Services.Add("localhost:console", async env => {
-                using (var conn = await env.Connect("api.eu-west", 80)) {
+                using (var conn = await env.Connect("api", 80)) {
+                    env.Debug("Running");
                     await conn.Write("Hello");
-                    responses.Add(await conn.Read(5.Sec()));
+                    var response = await conn.Read(5.Sec());
+                    responses.Add(response);
                 }
             });
 
-            async void Handler(IConn conn) {
-                using (conn) {
-                    requests.Add(await conn.Read(5.Sec()));
-                    await conn.Write("World");
-                }
-            }
+            
 
-            run.Services.Add("api.eu-west:engine", async env => {
-                using (var socket = await env.Listen(80)) {
+            run.Services.Add("api:engine", async env => {
+                async void Handler(IConn conn) {
+                    using (conn) {
+                        var msg = await conn.Read(5.Sec());
+                        requests.Add(msg);
+                        await conn.Write("World");
+                    }
+                }
+                using (var socket = await env.Bind(80)) {
                     while (!env.Token.IsCancellationRequested) {
                         var conn = await socket.Accept();
                         Handler(conn);
@@ -59,18 +64,14 @@ namespace SimMach.Sim {
                 TraceFile = "/Users/rinat/proj/core/SimMach/traces/trace.json"
             };
 
-
-            int eventsReceived = 0;
-            int eventsToSend = 5;
-            bool closed = false;
+            var eventsReceived = 0;
+            var eventsToSend = 5;
+            var closed = false;
+            
             run.Net.Link("localhost", "api");
-
             run.Services.Add("localhost:console", async env => {
                 using (var conn = await env.Connect("api", 80)) {
-                    env.Debug("Subscribing");
                     await conn.Write("SUBSCRIBE");
-
-
                     while (!env.Token.IsCancellationRequested) {
                         var msg = await conn.Read(5.Sec());
                         if (msg == "END_STREAM") {
@@ -80,31 +81,25 @@ namespace SimMach.Sim {
                         env.Debug($"Got {msg}");
                         eventsReceived++;
                     }
-
-
-
                     closed = true;
                 }
             });
 
             run.Services.Add("api:engine", async env => {
-                
                 async void Handler(IConn conn) {
                     using (conn) {
                         await conn.Read(5.Sec());
-                        for (int i = 0; i < eventsToSend; i++) {
-                            await env.Delay(10.Ms(), env.Token);
-                            await conn.Write("Event " + i);
+                        for (var i = 0; i < eventsToSend; i++) {
+                            await env.SimulateWork("work", 10.Ms());
+                            await conn.Write($"Event {i}");
                         }
-
                         await conn.Write("END_STREAM");
                     }
                 }
                 
-                using (var sock = await env.Listen(80)) {
+                using (var socket = await env.Bind(80)) {
                     while (!env.Token.IsCancellationRequested) {
-                        // TODO = cancel + timeout
-                        var conn = await sock.Accept();
+                        var conn = await socket.Accept();
                         Handler(conn);
                     }
                 }

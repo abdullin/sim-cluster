@@ -10,7 +10,7 @@ namespace SimMach {
         CancellationToken Token { get; }
         Task Delay(int i, CancellationToken token = default(CancellationToken));
         Task Delay(TimeSpan i, CancellationToken token = default(CancellationToken));
-        Task SimulateWork(int ms, CancellationToken token = default(CancellationToken));
+        Task SimulateWork(string name,TimeSpan ms, CancellationToken token = default(CancellationToken));
 
         TimeSpan Time { get; }
         Task<IConn> Connect(string endpoint, int port);
@@ -18,7 +18,7 @@ namespace SimMach {
     }
 
     public static class ExtendIEnv {
-        public static Task<ISocket> Listen(this IEnv env, int port) {
+        public static Task<ISocket> Bind(this IEnv env, int port) {
             return env.Listen(port, Timeout.InfiniteTimeSpan);
         }
     }
@@ -29,28 +29,6 @@ namespace SimMach {
         Task<object> Read(TimeSpan timeout);
     }
 
-     sealed class ClientConn : IConn {
-        public ClientConn(SimConn conn, SimProc proc) {
-            _conn = conn;
-            _proc = proc;
-        }
-        SimConn _conn;
-        SimProc _proc;
-        public void Dispose() {
-            _conn.Dispose();
-        }
-
-        public async Task Write(object message) {
-            _proc.Instant(message.ToString());
-            await _conn.Write(message);
-        }
-
-        public async Task<object> Read(TimeSpan timeout) {
-            using (_proc.TraceScope("Read")) {
-                return await _conn.Read(timeout);
-            }
-        }
-    }
 
    
 

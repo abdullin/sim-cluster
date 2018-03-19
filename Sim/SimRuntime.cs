@@ -210,8 +210,8 @@ namespace SimMach.Sim {
         }
 
         
-        public Task<ISocket> Listen(SimProc process, int port, TimeSpan timeout) {
-            return Network.Listen(process, port, timeout);
+        public Task<ISocket> Bind(SimProc process, int port, TimeSpan timeout) {
+            return Network.Bind(process, port, timeout);
         }
 
         public Task<IConn> Connect(SimProc client, SimEndpoint server) {
