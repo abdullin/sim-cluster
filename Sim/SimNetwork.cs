@@ -149,6 +149,13 @@ namespace SimMach.Sim {
             // we don't wait for the ACK.
             // but add latency for putting on the wire
             //await _env.Delay(1.Ms(), _env.Token);
+            
+            var id = $"{Socket.Endpoint}->{Remote}|{OutgoingSequence}";
+
+            using (_proc.TraceScope("Write")) {
+                await _proc.Delay(1, _proc.Token);
+                _proc.FlowStart(message.ToString(), id.GetHashCode().ToString());
+            }
 
             Socket.SendMessage(Remote, new SimPacket(message, _sequence));
             _sequence++;
@@ -167,6 +174,14 @@ namespace SimMach.Sim {
             _closed = true;
         }
 
+        public async Task TraceRead(SimPacket msg) {
+            var id = $"{Remote}->{Socket.Endpoint}|{msg.Seq}";
+            _proc.FlowEnd(msg.Payload.ToString(), id.GetHashCode().ToString());
+            using (_proc.TraceScope("Read")) {
+                await _proc.Delay(1, _proc.Token);
+            }
+        }
+
         public async Task<object> Read(TimeSpan timeout) {
 
             if (_closed) {
@@ -180,6 +195,8 @@ namespace SimMach.Sim {
                 if (NextIsFin()) {
                     Close(SimTcp.FIN);
                 }
+
+                await TraceRead(tuple);
 
                 _ackSequence = tuple.Seq;
 
@@ -197,6 +214,8 @@ namespace SimMach.Sim {
             if (NextIsFin()) {
                 Close("FIN");
             }
+            
+            await TraceRead(msg);
 
             return msg.Payload;
 
@@ -238,27 +257,13 @@ namespace SimMach.Sim {
         public async Task Write(object message) {
             
 
-            var id = $"{_conn.Socket.Endpoint}->{_conn.Remote}|{_conn.OutgoingSequence}";
-
-            using (_proc.TraceScope("Write")) {
-                await _proc.Delay(1, _proc.Token);
-                _proc.FlowStart(message.ToString(), id.GetHashCode().ToString());
-            }
+          
             await _conn.Write(message);
         }
 
         public async Task<object> Read(TimeSpan timeout) {
-            var msg = await _conn.Read(timeout);
-            var id = $"{_conn.Remote}->{_conn.Socket.Endpoint}|{_conn.LastAck}";
-            _proc.FlowEnd(msg.ToString(), id.GetHashCode().ToString());
-            using (_proc.TraceScope("Read")) {
-                await _proc.Delay(1, _proc.Token);
-            }
+            return await _conn.Read(timeout);
             
-            
-            // deserialization overhead. Also to indicate
-            //_proc.Instant(msg.ToString());
-            return msg;
 
         }
     }
@@ -330,6 +335,7 @@ namespace SimMach.Sim {
             
             
             conn = new SimConn(this, client, _proc);
+            conn.TraceRead(msg);
             _connections.Add(client, conn);
             
             _proc.Schedule(async () => {

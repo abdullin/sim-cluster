@@ -1,60 +1,11 @@
 [
 {"name":"process_name","ph":"M","pid":1,"args":{"name":"localhost:console"} }
-,{"name":"process_name","ph":"M","pid":2,"args":{"name":"api:engine"} }
+,{"name":"process_name","ph":"M","pid":2,"args":{"name":"localhost:console2"} }
+,{"name":"process_name","ph":"M","pid":3,"args":{"name":"api:engine"} }
 ,{"cat":"proc", "name":"Connect to api:80","ph":"B","pid":1,"ts":0,"id":1}
-,{"cat":"proc", "name":"Bind","ph":"B","pid":2,"ts":0,"id":2}
-,{"cat":"proc", "name":"Bind","ph":"E","pid":2,"ts":0,"id":2}
-,{"cat":"proc", "name":"Connect to api:80","ph":"E","pid":1,"ts":100000,"id":1}
-,{"cat":"proc", "name":"Write","ph":"B","pid":1,"ts":100000,"id":3}
-,{"cat":"proc", "name":"SUBSCRIBE","ph":"s","pid":1,"ts":101000,"id":"-2068300622"}
-,{"cat":"proc", "name":"Write","ph":"E","pid":1,"ts":101000,"id":3}
-,{"cat":"proc", "name":"SUBSCRIBE", "ph":"f","pid":2,"ts":151000,"id":"-2068300622"}
-,{"cat":"proc", "name":"Read","ph":"B","pid":2,"ts":151000,"id":4}
-,{"cat":"proc", "name":"Read","ph":"E","pid":2,"ts":152000,"id":4}
-,{"cat":"proc", "name":"work","ph":"B","pid":2,"ts":152000,"id":5}
-,{"cat":"proc", "name":"work","ph":"E","pid":2,"ts":162000,"id":5}
-,{"cat":"proc", "name":"Write","ph":"B","pid":2,"ts":162000,"id":6}
-,{"cat":"proc", "name":"Event 0","ph":"s","pid":2,"ts":163000,"id":"1338918755"}
-,{"cat":"proc", "name":"Write","ph":"E","pid":2,"ts":163000,"id":6}
-,{"cat":"proc", "name":"work","ph":"B","pid":2,"ts":163000,"id":7}
-,{"cat":"proc", "name":"work","ph":"E","pid":2,"ts":173000,"id":7}
-,{"cat":"proc", "name":"Write","ph":"B","pid":2,"ts":173000,"id":8}
-,{"cat":"proc", "name":"Event 1","ph":"s","pid":2,"ts":174000,"id":"-1832503353"}
-,{"cat":"proc", "name":"Write","ph":"E","pid":2,"ts":174000,"id":8}
-,{"cat":"proc", "name":"work","ph":"B","pid":2,"ts":174000,"id":9}
-,{"cat":"proc", "name":"work","ph":"E","pid":2,"ts":184000,"id":9}
-,{"cat":"proc", "name":"Write","ph":"B","pid":2,"ts":184000,"id":10}
-,{"cat":"proc", "name":"Event 2","ph":"s","pid":2,"ts":185000,"id":"417529839"}
-,{"cat":"proc", "name":"Write","ph":"E","pid":2,"ts":185000,"id":10}
-,{"cat":"proc", "name":"work","ph":"B","pid":2,"ts":185000,"id":11}
-,{"cat":"proc", "name":"work","ph":"E","pid":2,"ts":195000,"id":11}
-,{"cat":"proc", "name":"Write","ph":"B","pid":2,"ts":195000,"id":12}
-,{"cat":"proc", "name":"Event 3","ph":"s","pid":2,"ts":196000,"id":"-1299585750"}
-,{"cat":"proc", "name":"Write","ph":"E","pid":2,"ts":196000,"id":12}
-,{"cat":"proc", "name":"work","ph":"B","pid":2,"ts":196000,"id":13}
-,{"cat":"proc", "name":"work","ph":"E","pid":2,"ts":206000,"id":13}
-,{"cat":"proc", "name":"Write","ph":"B","pid":2,"ts":206000,"id":14}
-,{"cat":"proc", "name":"Event 4","ph":"s","pid":2,"ts":207000,"id":"-1052074110"}
-,{"cat":"proc", "name":"Write","ph":"E","pid":2,"ts":207000,"id":14}
-,{"cat":"proc", "name":"Write","ph":"B","pid":2,"ts":207000,"id":15}
-,{"cat":"proc", "name":"END_STREAM","ph":"s","pid":2,"ts":208000,"id":"-1351688719"}
-,{"cat":"proc", "name":"Write","ph":"E","pid":2,"ts":208000,"id":15}
-,{"cat":"proc", "name":"Event 0", "ph":"f","pid":1,"ts":213000,"id":"1338918755"}
-,{"cat":"proc", "name":"Read","ph":"B","pid":1,"ts":213000,"id":16}
-,{"cat":"proc", "name":"Read","ph":"E","pid":1,"ts":214000,"id":16}
-,{"cat":"proc", "name":"Event 1", "ph":"f","pid":1,"ts":224000,"id":"-1832503353"}
-,{"cat":"proc", "name":"Read","ph":"B","pid":1,"ts":224000,"id":17}
-,{"cat":"proc", "name":"Read","ph":"E","pid":1,"ts":225000,"id":17}
-,{"cat":"proc", "name":"Event 2", "ph":"f","pid":1,"ts":235000,"id":"417529839"}
-,{"cat":"proc", "name":"Read","ph":"B","pid":1,"ts":235000,"id":18}
-,{"cat":"proc", "name":"Read","ph":"E","pid":1,"ts":236000,"id":18}
-,{"cat":"proc", "name":"Event 3", "ph":"f","pid":1,"ts":246000,"id":"-1299585750"}
-,{"cat":"proc", "name":"Read","ph":"B","pid":1,"ts":246000,"id":19}
-,{"cat":"proc", "name":"Read","ph":"E","pid":1,"ts":247000,"id":19}
-,{"cat":"proc", "name":"Event 4", "ph":"f","pid":1,"ts":257000,"id":"-1052074110"}
-,{"cat":"proc", "name":"Read","ph":"B","pid":1,"ts":257000,"id":20}
-,{"cat":"proc", "name":"Read","ph":"E","pid":1,"ts":258000,"id":20}
-,{"cat":"proc", "name":"END_STREAM", "ph":"f","pid":1,"ts":258000,"id":"-1351688719"}
-,{"cat":"proc", "name":"Read","ph":"B","pid":1,"ts":258000,"id":21}
-,{"cat":"proc", "name":"Read","ph":"E","pid":1,"ts":259000,"id":21}
+,{"cat":"proc", "name":"Write","ph":"B","pid":1,"ts":0,"id":2}
+,{"cat":"proc", "name":"Connect to api:80","ph":"B","pid":2,"ts":0,"id":3}
+,{"cat":"proc", "name":"Connect to api:80","ph":"E","pid":2,"ts":0,"id":3}
+,{"cat":"proc", "name":"Bind","ph":"B","pid":3,"ts":0,"id":4}
+,{"cat":"proc", "name":"Bind","ph":"E","pid":3,"ts":0,"id":4}
 ]
