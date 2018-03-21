@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -6,7 +7,7 @@ namespace SimMach.Sim {
 
 
 
-    class SimProc : IEnv {
+    class SimProc : IEnv, IDisposable {
         readonly int _procId;
         readonly TaskFactory _scheduler;
         public readonly ServiceId Id;
@@ -68,12 +69,26 @@ namespace SimMach.Sim {
         public async Task<ISocket> Bind(int port, TimeSpan timeout) {
             return await Runtime.Bind(this, port, timeout);
         }
+        
+        
 
         
 
 
         public void Debug(string l) {
             Runtime.Debug($"  {Id.Machine,-13} {l}");
+        }
+
+        readonly Dictionary<SimEndpoint, SimSocket> _sockets = new Dictionary<SimEndpoint, SimSocket>(SimEndpoint.Comparer);
+
+        public void RegisterSocket(SimSocket proc) {
+            _sockets.Add(proc.Endpoint, proc);
+        }
+
+        public void Dispose() {
+            foreach (var (_, sock) in _sockets) {
+                sock.Dispose();
+            }
         }
     }
 }

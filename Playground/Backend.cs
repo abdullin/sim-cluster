@@ -66,11 +66,6 @@ namespace SimMach.Sim {
                 await conn.Write(new AddItemResponse(r.ItemID, r.Amount, 0));
             }
         }
-        
-        
-        
-      
-        
     }
 
     public sealed class AddItemRequest {
@@ -124,8 +119,8 @@ namespace SimMach.Sim {
     public sealed class ClientLib {
         readonly IEnv _env;
         readonly SimEndpoint[] _endpoints;
-
         readonly TimeSpan[] _outages;
+        static readonly TimeSpan _downtime = TimeSpan.FromSeconds(15);
 
         public ClientLib(IEnv env, params SimEndpoint[] endpoints) {
             _env = env;
@@ -133,10 +128,13 @@ namespace SimMach.Sim {
             _outages = new TimeSpan[endpoints.Length];
         }
         
-        readonly TimeSpan _downtime = TimeSpan.FromSeconds(15);
+        public async Task<decimal> AddItem(long id, decimal amount) {
+            var request = new AddItemRequest(id, amount);
+            var response = await Unary<AddItemRequest,AddItemResponse>(request);
+            return response.Amount;
+        }
 
-
-        public async Task<TResponse> Unary<TRequest, TResponse>(TRequest req) {
+        async Task<TResponse> Unary<TRequest, TResponse>(TRequest req) {
             var now = _env.Time;
             for (int i = 0; i < _endpoints.Length; i++) {
                 var endpoint = _endpoints[i];
@@ -164,9 +162,6 @@ namespace SimMach.Sim {
         }
 
 
-        public Task<AddItemResponse> AddItem(long id, decimal amount) {
-            return Unary<AddItemRequest,AddItemResponse>(new AddItemRequest(id, amount));
-            
-        }
+        
     }
 }

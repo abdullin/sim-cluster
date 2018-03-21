@@ -54,6 +54,10 @@ namespace SimMach.Sim {
                 _proc.Kill();
             }
 
+            
+            
+            
+
             _proc = null;
             _task = null;
         }

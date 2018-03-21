@@ -73,6 +73,8 @@ namespace SimMach.Sim {
             var socket = new SimSocket(proc, endpoint, this);
             _sockets.Add(endpoint, socket);
 
+            proc.RegisterSocket(socket);
+
             return socket;
         }
 
@@ -117,6 +119,10 @@ namespace SimMach.Sim {
             return new ClientConn(conn);
             
             
+        }
+
+        public void ReleaseSocket(SimSocket simSocket, SimProc proc) {
+            _sockets.Remove(simSocket.Endpoint);
         }
     }
 
@@ -365,7 +371,9 @@ namespace SimMach.Sim {
             });
         }
 
-        public void Dispose() { }
+        public void Dispose() {
+            _net.ReleaseSocket(this, _proc);
+        }
 
         public void SendMessage(SimPacket message) {
             _net.SendPacket(message);

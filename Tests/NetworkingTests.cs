@@ -84,6 +84,29 @@ namespace SimMach.Sim {
         }
         
         [Test]
+        public void RequestReplyAfterServerReboot() {
+            var run = NewTestRuntime();
+
+            var requests = new List<object>();
+            var responses = new List<object>();
+
+            run.Net.Link("localhost", "server");
+            
+            AddHelloWorldClient(run, "server", responses);
+            AddHelloWorldServer(run, "server", requests);
+
+            run.RunPlan(async plan => {
+                plan.StartServices(env => env.Machine == "server");
+                await plan.StopServices();
+                plan.StartServices();
+
+            });
+
+            CollectionAssert.AreEquivalent(new object[]{"Hello"}, requests);
+            CollectionAssert.AreEquivalent(new object[]{"World"}, responses);
+        }
+        
+        [Test]
         public void RequestReplyThroughTheProxy() {
             var run = NewTestRuntime();
             var requests = new List<object>();
