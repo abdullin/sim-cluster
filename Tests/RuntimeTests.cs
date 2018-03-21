@@ -15,7 +15,7 @@ namespace SimMach.Sim {
             test.Services.Add("com:test", async env => {
                 bootCount++;
                 while (!env.Token.IsCancellationRequested) {
-                    await env.SimulateWork("work",100.Ms());
+                    await env.SimulateWork(100.Ms());
                 }
             });
             
@@ -42,7 +42,7 @@ namespace SimMach.Sim {
                 launched = true;
                 try {
                     while (!env.Token.IsCancellationRequested) {
-                        await env.SimulateWork("work",10000.Ms());
+                        await env.SimulateWork(10000.Ms());
                     }
                 } finally {
                     // this should never hit
@@ -53,7 +53,7 @@ namespace SimMach.Sim {
             test.RunPlan(async plan => {
                 plan.StartServices();
                 await plan.Delay(1000);
-                await plan.StopServices(grace:1000);
+                await plan.StopServices(grace:1.Sec());
             });
             
             Assert.IsTrue(launched, nameof(launched));
@@ -72,7 +72,7 @@ namespace SimMach.Sim {
             test.Services.Add("com:test", async env => {
                 try {
                     while (!env.Token.IsCancellationRequested) {
-                        await env.SimulateWork("work",10.Sec(), env.Token);
+                        await env.SimulateWork(10.Sec(), env.Token);
                     }
                 } finally {
                     terminated = env.Time;

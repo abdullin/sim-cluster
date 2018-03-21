@@ -40,7 +40,7 @@ namespace SimMach.Sim {
 
         }
 
-        public async Task Stop(int grace) {
+        public async Task Stop(TimeSpan grace) {
             if (_task == null || _task.IsCompleted) {
                 return;
             }

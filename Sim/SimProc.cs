@@ -22,11 +22,6 @@ namespace SimMach.Sim {
 
 
 
-
-        public Task Delay(int i, CancellationToken token) {
-            return SimDelayTask.Delay(i, token);
-        }
-
         public Task Delay(TimeSpan i, CancellationToken token) {
             return SimDelayTask.Delay(i, token);
         }
@@ -35,7 +30,7 @@ namespace SimMach.Sim {
             return new SimFuture<T>(timeout, token);
         }
 
-        public async Task SimulateWork(string name, TimeSpan ms, CancellationToken token) {
+        public async Task SimulateWork(TimeSpan ms, CancellationToken token) {
             Runtime.RecordActivity();
             await SimDelayTask.Delay(ms, token);
             Runtime.RecordActivity();
@@ -66,16 +61,15 @@ namespace SimMach.Sim {
 
         public TimeSpan Time => Runtime.Time;
 
-        public async Task<IConn> Connect(string endpoint, int port) {
-            var server = new SimEndpoint(endpoint, port);
-
-            return await Runtime.Connect(this, server);
-
+        public async Task<IConn> Connect(SimEndpoint endpoint) {
+            return await Runtime.Connect(this, endpoint);
         }
 
-        public async Task<ISocket> Listen(int port, TimeSpan timeout) {
+        public async Task<ISocket> Bind(int port, TimeSpan timeout) {
             return await Runtime.Bind(this, port, timeout);
         }
+
+        
 
 
         public void Debug(string l) {

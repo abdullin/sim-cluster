@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection.Emit;
 using System.Threading.Tasks;
@@ -12,6 +13,7 @@ namespace SimMach.Sim {
         public long MaxSteps = long.MaxValue;
         public bool DebugNetwork;
 
+        
 
 
 
@@ -25,8 +27,10 @@ namespace SimMach.Sim {
             env.Plan(plan);
 
             env.Network.DebugPackets = DebugNetwork;
+            
+            
 
-                env.Run();
+            env.Run();
         }
 
         public void RunScript(Func<IEnv, Task> script) {

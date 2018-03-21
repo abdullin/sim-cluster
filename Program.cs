@@ -15,26 +15,8 @@ namespace SimMach
     class Program {
         static void Main(string[] args) {
 
-            var bootCount = 0;
-
-            var test = new TestRuntime() {
-                MaxTime = TimeSpan.FromMinutes(2)
-            };
-
-            test.Services.Add("com:test", async env => {
-                bootCount++;
-                while (!env.Token.IsCancellationRequested) {
-                    await env.SimulateWork("work",100.Ms());
-                }
-            });
+            new EdaSetups().Playground();
             
-            test.RunPlan(async plan => {
-                plan.StartServices();
-                await plan.Delay(TimeSpan.FromMinutes(1));
-                await plan.StopServices();
-                plan.StartServices();
-            });
-
             /*var t = new Topology {
                 {"lb0.eu-west:slow", SlowProcess},
                 {"lb0.eu-west:quick", QuickProcess},
@@ -66,7 +48,7 @@ namespace SimMach
             env.Debug("Starting");
             try {
                 while (!env.Token.IsCancellationRequested) {
-                    await env.Delay(1000, env.Token);
+                    await env.Delay(1.Sec(), env.Token);
                 }
             } catch (TaskCanceledException) {
                 env.Debug("Abort");
@@ -77,7 +59,7 @@ namespace SimMach
             env.Debug("Starting");
             try {
                 while (!env.Token.IsCancellationRequested) {
-                    await env.Delay(5000, env.Token);
+                    await env.Delay(5.Sec(), env.Token);
                 }
             } catch (TaskCanceledException) {
                 env.Debug("Abort");

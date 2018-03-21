@@ -200,7 +200,7 @@ namespace SimMach.Sim {
                     using (conn) {
                         await conn.Read(5.Sec());
                         for (var i = 0; i < eventsToSend; i++) {
-                            await env.SimulateWork("work", 10.Ms());
+                            await env.SimulateWork(10.Ms());
                             await conn.Write($"Event {i}");
                         }
                         await conn.Write("END_STREAM");

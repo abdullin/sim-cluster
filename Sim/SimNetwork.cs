@@ -18,11 +18,13 @@ namespace SimMach.Sim {
             foreach (var link in def.Links) {
                 var service = new ServiceId($"network:{link.Client}->{link.Server}");
                 var scheduler = new SimScheduler(_runtime, service);
-                _routes.Add(link, new SimRoute(scheduler, this, link));
+                var debug = def.DebugRoutes.Contains(link);
+                _routes.Add(link, new SimRoute(scheduler, this, link, debug));
             }
         }
 
         public bool DebugPackets;
+        
 
         public void Debug(string message) {
             if (DebugPackets)
@@ -390,17 +392,19 @@ namespace SimMach.Sim {
         readonly RouteId _route;
         SimScheduler _scheduler;
         readonly TaskFactory _factory;
+        readonly bool _debug;
 
-        public void Debug(string l) {
-
+       void Debug(string l) {
+           if (_debug)
             _network.Debug($"  {_route.Full,-34} {l}");
         }
 
-        public SimRoute(SimScheduler scheduler, SimNetwork network, RouteId route) {
+        public SimRoute(SimScheduler scheduler, SimNetwork network, RouteId route, bool debug) {
             _scheduler = scheduler;
             _network = network;
             _route = route;
             _factory = new TaskFactory(_scheduler);
+            _debug = debug;
         }
 
         public Task Send(SimPacket msg) {
@@ -408,8 +412,12 @@ namespace SimMach.Sim {
             // TODO: network cancellation
             _factory.StartNew(async () => {
                 // delivery wait
-                await SimDelayTask.Delay(50);
-                _network.InternalDeliver(msg);
+                try {
+                    await SimDelayTask.Delay(50);
+                    _network.InternalDeliver(msg);
+                } catch (Exception ex) {
+                    Debug($"FATAL: {ex}");
+                }
             });
             return Task.FromResult(true);
         }

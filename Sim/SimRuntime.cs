@@ -51,7 +51,7 @@ namespace SimMach.Sim {
         readonly TaskFactory _factory;
 
         public SimRuntime(MachineDef topology, NetworkDef net) {
-            Services = topology.ToDictionary(p => p.Key, p => new SimService(this, p.Key, p.Value));
+            Services = topology.Dictionary.ToDictionary(p => p.Key, p => new SimService(this, p.Key, p.Value));
             Network = new SimNetwork(net, this);
             
             _scheduler = new SimScheduler(this,new ServiceId("simulation:proc"));
@@ -177,7 +177,7 @@ namespace SimMach.Sim {
 
             var softTime = TimeSpan.FromTicks(_time);
             var factor = softTime.TotalHours / watch.Elapsed.TotalHours;
-            Debug($"{reason.ToUpper()}");
+            Debug($"{reason.ToUpper()} at {softTime}");
 
             if (_halt != null) {
                 Console.WriteLine(_halt.Demystify());
@@ -198,8 +198,8 @@ namespace SimMach.Sim {
             }
         }
 
-        Task ISimPlan.StopServices(Predicate<ServiceId> selector = null, int grace = 1000) {
-            var tasks = Filter(selector).Select(p => p.Stop(grace)).ToArray();
+        Task ISimPlan.StopServices(Predicate<ServiceId> selector = null, TimeSpan? grace = null) {
+            var tasks = Filter(selector).Select(p => p.Stop(grace ?? 2.Sec())).ToArray();
             return Task.WhenAll(tasks);
         }
 

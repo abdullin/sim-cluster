@@ -7,6 +7,10 @@ namespace SimMach {
                 return $"{ts.TotalSeconds:F1} seconds";
             }
 
+            if (ts.TotalHours < 1) {
+                return $"{ts.TotalMinutes:F1} minutes";
+            }
+
             return $"{ts.TotalHours:F1} hours";
 
 

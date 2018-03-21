@@ -5,34 +5,58 @@ using System.Linq;
 using System.Threading.Tasks;
 
 namespace SimMach {
-    public class MachineDef : Dictionary<ServiceId, Func<IEnv, Task>> {
-        public MachineDef() : base(ServiceId.Comparer) { }
+    public class MachineDef {
+
+        public readonly Dictionary<ServiceId, Func<IEnv, Task>> Dictionary =
+            new Dictionary<ServiceId, Func<IEnv, Task>>(ServiceId.Comparer);
 
 
+        public void Add(string svc, Func<IEnv, Task> run) {
 
-        public void PrettyPrint() {
-            var machines = this.GroupBy(p => p.Key.Machine);
-            // printing
-            foreach (var m in machines) {
-                Console.WriteLine($"{m.Key}");
-
-                foreach (var svc in m) {
-                    Console.WriteLine($"  {svc.Key.Service}");
-                }
+            if (!svc.Contains(':')) {
+                svc = svc + ":" + svc;
             }
+            
+            
+            Dictionary.Add(new ServiceId(svc), run);
         }
+        
+        
+
+
+
+
+        /* public void PrettyPrint() {
+             var machines = this.GroupBy(p => p.Key.Machine);
+             // printing
+             foreach (var m in machines) {
+                 Console.WriteLine($"{m.Key}");
+ 
+                 foreach (var svc in m) {
+                     Console.WriteLine($"  {svc.Key.Service}");
+                 }
+             }
+         }*/
     }
     
     public sealed class NetworkDef {
         readonly Dictionary<RouteId, string> _dictionary = new Dictionary<RouteId, string>(RouteId.Comparer);
+        
+        
 
         public ICollection<RouteId> Links => _dictionary.Keys;
+
+        public HashSet<RouteId> DebugRoutes = new HashSet<RouteId>(RouteId.Comparer);
 
         public void Link(string client, string server) {
             _dictionary.Add(new RouteId(client, server), null);
             _dictionary.Add(new RouteId(server, client), null);
         }
-        
+
+        public void TraceRoute(string client, string server) {
+            DebugRoutes.Add(new RouteId(client, server));
+            DebugRoutes.Add(new RouteId(server, client));
+        }
         
     }
 
