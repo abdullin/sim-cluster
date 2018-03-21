@@ -121,13 +121,13 @@ namespace SimMach.Sim {
         }
     }
 
-    public sealed class BackendClient {
+    public sealed class ClientLib {
         readonly IEnv _env;
         readonly SimEndpoint[] _endpoints;
 
         readonly TimeSpan[] _outages;
 
-        public BackendClient(IEnv env, params SimEndpoint[] endpoints) {
+        public ClientLib(IEnv env, params SimEndpoint[] endpoints) {
             _env = env;
             _endpoints = endpoints;
             _outages = new TimeSpan[endpoints.Length];
@@ -153,9 +153,9 @@ namespace SimMach.Sim {
                     }
                 } catch (IOException ex) {
                     if (_outages[i] > now) {
-                        _env.Debug($"! {ex.Message} for {req}. {endpoint} is already marked as DOWN");
+                        _env.Debug($"! {ex.Message} for '{req}'. {endpoint} already DOWN");
                     } else {
-                        _env.Debug($"! {ex.Message} for {req}. Marking {endpoint} as DOWN");
+                        _env.Debug($"! {ex.Message} for '{req}'. {endpoint} DOWN");
                         _outages[i] = now + _downtime;
                     }
                 }

@@ -57,6 +57,12 @@ namespace SimMach {
             _dictionary.Add(new RouteId(server, client), null);
         }
 
+        public void Link(string from, params string[] server) {
+            foreach (var s in server) {
+                Link(from, s);
+            }
+        }
+
         public void TraceRoute(string client, string server) {
             DebugRoutes.Add(new RouteId(client, server));
             DebugRoutes.Add(new RouteId(server, client));

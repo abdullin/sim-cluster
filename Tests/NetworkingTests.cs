@@ -42,7 +42,7 @@ namespace SimMach.Sim {
             run.Net.Link("localhost", "server");
             AddHelloWorldClient(run, "server", responses);
             
-            run.Services.Add("server:dead", async env => {
+            run.Svc.Add("server:dead", async env => {
                 using (var socket = await env.Bind(80)) {
                     while (!env.Token.IsCancellationRequested) {
                         await env.Delay(10.Minutes());
@@ -103,7 +103,7 @@ namespace SimMach.Sim {
         }
 
         static void AddHelloWorldServer(TestRuntime run, string endpoint, List<object> requests) {
-            run.Services.Add(endpoint + ":engine", async env => {
+            run.Svc.Add(endpoint + ":engine", async env => {
                 async void Handler(IConn conn) {
                     using (conn) {
                         var msg = await conn.Read(5.Sec());
@@ -124,7 +124,7 @@ namespace SimMach.Sim {
 
         static void AddHelloWorldProxy(TestRuntime run, string endpoint, string target) {
             
-            run.Services.Add(endpoint + ":engine", async env => {
+            run.Svc.Add(endpoint + ":engine", async env => {
             
                 async void Handler(IConn conn) {
                     using (conn) {
@@ -155,7 +155,7 @@ namespace SimMach.Sim {
         }
 
         static void AddHelloWorldClient(TestRuntime run, string endpoint, List<object> responses) {
-            run.Services.Add("localhost:console", async env => {
+            run.Svc.Add("localhost:console", async env => {
                 try {
                     using (var conn = await env.Connect(endpoint, 80)) {
                         await conn.Write("Hello");
@@ -179,7 +179,7 @@ namespace SimMach.Sim {
             var closed = false;
             
             run.Net.Link("localhost", "api");
-            run.Services.Add("localhost:console", async env => {
+            run.Svc.Add("localhost:console", async env => {
                 using (var conn = await env.Connect("api", 80)) {
                     await conn.Write("SUBSCRIBE");
                     while (!env.Token.IsCancellationRequested) {
@@ -195,7 +195,7 @@ namespace SimMach.Sim {
                 }
             });
 
-            run.Services.Add("api:engine", async env => {
+            run.Svc.Add("api:engine", async env => {
                 async void Handler(IConn conn) {
                     using (conn) {
                         await conn.Read(5.Sec());

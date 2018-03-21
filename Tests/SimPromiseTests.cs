@@ -77,7 +77,7 @@ namespace SimMach.Sim {
             var cancel = TimeSpan.MinValue;
             var result = false;
             
-            test.Services.Add("m:m", async env => {
+            test.Svc.Add("m:m", async env => {
                 var promise = new SimFuture<bool>(5000, env.Token);
                 try {
                     result = await promise.Task;

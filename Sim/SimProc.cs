@@ -73,7 +73,7 @@ namespace SimMach.Sim {
 
 
         public void Debug(string l) {
-            Runtime.Debug($"  {Id.Machine,-13} {Id.Service,-20} {l}");
+            Runtime.Debug($"  {Id.Machine,-13} {l}");
         }
     }
 }

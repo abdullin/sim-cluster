@@ -5,9 +5,9 @@ namespace SimMach.Sim {
     class UserBot  {
         readonly IEnv _sim;
         readonly int _count;
-        readonly BackendClient _client;
+        readonly ClientLib _client;
 
-        public UserBot(IEnv sim, int count, BackendClient client) {
+        public UserBot(IEnv sim, int count, ClientLib client) {
             _sim = sim;
             _count = count;
             _client = client;

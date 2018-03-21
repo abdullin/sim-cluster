@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SimMach.Sim {
     public sealed class TestRuntime {
-        public readonly MachineDef Services = new MachineDef();
+        public readonly MachineDef Svc = new MachineDef();
         public readonly NetworkDef Net = new NetworkDef();
         
         public TimeSpan MaxTime = TimeSpan.MaxValue;
@@ -18,7 +18,7 @@ namespace SimMach.Sim {
 
 
         public void RunPlan(Func<ISimPlan, Task> plan) {
-            var env = new SimRuntime(Services, Net) {
+            var env = new SimRuntime(Svc, Net) {
                 MaxSteps = MaxSteps,
                 MaxTime = MaxTime
             };
@@ -34,7 +34,7 @@ namespace SimMach.Sim {
         }
 
         public void RunScript(Func<IEnv, Task> script) {
-            Services.Add("local:script", script);
+            Svc.Add("local:script", script);
             RunAll();
         }
 
