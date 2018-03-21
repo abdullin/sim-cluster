@@ -31,7 +31,7 @@ namespace SimMach.Sim {
             
             run.RunAll();
             
-            AssertOneError(responses, "Connection refused");
+            AssertOneError(responses, "reset");
         }
         
         [Test]

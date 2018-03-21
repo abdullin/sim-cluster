@@ -106,7 +106,9 @@ namespace SimMach.Sim {
             var response = await conn.Read(5.Sec());
             if (response.Flag != (SimFlag.Ack | SimFlag.Syn)) {
                 await conn.Write(null, SimFlag.Reset);
-                
+                clientSocket._connections.Remove(server);
+                throw new IOException("Failed to connect");
+
             }
             await conn.Write(null, SimFlag.Ack);
             
