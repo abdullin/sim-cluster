@@ -1,4 +1,6 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace SimMach.Sim {
@@ -121,21 +123,50 @@ namespace SimMach.Sim {
 
     public sealed class BackendClient {
         readonly IEnv _env;
-        readonly SimEndpoint _endpoint;
+        readonly SimEndpoint[] _endpoints;
 
-        public BackendClient(IEnv env, SimEndpoint endpoint) {
+        readonly TimeSpan[] _outages;
+
+        public BackendClient(IEnv env, params SimEndpoint[] endpoints) {
             _env = env;
-            _endpoint = endpoint;
+            _endpoints = endpoints;
+            _outages = new TimeSpan[endpoints.Length];
+        }
+        
+        readonly TimeSpan _downtime = TimeSpan.FromSeconds(15);
+
+
+        public async Task<TResponse> Unary<TRequest, TResponse>(TRequest req) {
+            var now = _env.Time;
+            for (int i = 0; i < _endpoints.Length; i++) {
+                var endpoint = _endpoints[i];
+                if (_outages[i] > now) {
+                    continue;
+                }
+                _env.Debug($"Send '{req}' to {endpoint}");
+
+                try {
+                    using (var conn = await _env.Connect(endpoint)) {
+                        await conn.Write(req);
+                        var res = await conn.Read(5.Sec());
+                        return (TResponse) res;
+                    }
+                } catch (IOException ex) {
+                    if (_outages[i] > now) {
+                        _env.Debug($"! {ex.Message} for {req}. {endpoint} is already marked as DOWN");
+                    } else {
+                        _env.Debug($"! {ex.Message} for {req}. Marking {endpoint} as DOWN");
+                        _outages[i] = now + _downtime;
+                    }
+                }
+            }
+            throw new IOException("No gateways active");
         }
 
 
-        public async Task<AddItemResponse> AddItem(long id, decimal amount) {
-            _env.Debug($"Add {amount} to {id}");
-            using (var conn = await _env.Connect(_endpoint)) {
-                await conn.Write(new AddItemRequest(id, amount));
-                var response = await conn.Read(5.Sec());
-                return (AddItemResponse)response;
-            }
+        public Task<AddItemResponse> AddItem(long id, decimal amount) {
+            return Unary<AddItemRequest,AddItemResponse>(new AddItemRequest(id, amount));
+            
         }
     }
 }

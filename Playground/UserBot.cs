@@ -17,7 +17,7 @@ namespace SimMach.Sim {
         public async Task FireLoad() {
             for (int i = 0; i < _count; i++) {
 
-                await _sim.Delay(10.Ms());
+                await _sim.Delay(10.Sec());
                 await _client.AddItem(1, 10);
             }
             // we don't want to restart, so we wait forever

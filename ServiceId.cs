@@ -12,13 +12,17 @@ namespace SimMach {
 
 
         public void Add(string svc, Func<IEnv, Task> run) {
-
             if (!svc.Contains(':')) {
                 svc = svc + ":" + svc;
             }
-            
-            
             Dictionary.Add(new ServiceId(svc), run);
+        }
+        
+        
+        public void Add(string[] svc, Func<IEnv, Task> run) {
+            foreach (var s in svc) {
+                Add(s, run);
+            }
         }
         
         

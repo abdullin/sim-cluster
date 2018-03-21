@@ -385,6 +385,11 @@ namespace SimMach.Sim {
         }
 
         public static readonly IEqualityComparer<SimEndpoint> Comparer = new DelegateComparer<SimEndpoint>(a => a.ToString());
+
+        public static implicit operator SimEndpoint(string addr) {
+            var args = addr.Split(":");
+            return new SimEndpoint(args[0], int.Parse(args[1]));
+        }
     }
 
     sealed class SimRoute {
