@@ -44,7 +44,6 @@ namespace SimMach.Sim {
         int _traces;
 
 
-        public readonly Tracer Tracer;
         public readonly SimFutureQueue FutureQueue = new SimFutureQueue();
 
         // system schedulers
@@ -57,7 +56,6 @@ namespace SimMach.Sim {
             
             _scheduler = new SimScheduler(this,new ServiceId("simulation:proc"));
             _factory = new TaskFactory(_scheduler);
-            Tracer = new Tracer(() => _time);
         }
 
         
@@ -121,8 +119,6 @@ namespace SimMach.Sim {
         public void Run(Stream trace = null) {
             _halt = null;
 
-            Tracer.Start(trace);
-            
             var watch = Stopwatch.StartNew();
             var reason = "none";
             
@@ -182,8 +178,6 @@ namespace SimMach.Sim {
             var softTime = TimeSpan.FromTicks(_time);
             var factor = softTime.TotalHours / watch.Elapsed.TotalHours;
             Debug($"{reason.ToUpper()}");
-            //Console.WriteLine("Simulation parameters:");
-            Tracer.Finish();
 
             if (_halt != null) {
                 Console.WriteLine(_halt.Demystify());

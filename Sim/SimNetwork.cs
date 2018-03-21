@@ -29,29 +29,33 @@ namespace SimMach.Sim {
             _runtime.Debug(message);
         }
 
-        public TracePoint Trace(SimEndpoint client, SimEndpoint server, SimPacket pack) {
-            return TracePoint.None;
-            //return _runtime.Tracer.TracePacket(client, server, pack);
-        }
-
         readonly Dictionary<RouteId, SimRoute> _routes = new Dictionary<RouteId, SimRoute>(RouteId.Comparer);
         readonly Dictionary<SimEndpoint, SimSocket> _sockets = new Dictionary<SimEndpoint, SimSocket>(SimEndpoint.Comparer);
         
 
-        public void SendPacket(SimEndpoint from, SimEndpoint to, SimPacket message) {
-            _routes[new RouteId(from.Machine, to.Machine)].Send(from, to, message);
+        public void SendPacket(SimPacket packet) {
+            var routeId = new RouteId(packet.Source.Machine, packet.Destination.Machine);
+            _routes[routeId].Send(packet);
         }
 
 
-        public void InternalDeliver(SimEndpoint from, SimEndpoint to, SimPacket msg) {
-            if (!_sockets.TryGetValue(to, out var socket)) {
+        public void InternalDeliver(SimPacket msg) {
+            if (!_sockets.TryGetValue(msg.Destination, out var socket)) {
                 // socket not bound
-                SendPacket(from, to, new SimPacket(new IOException("Socket not found"),0));
+                
+                var back = new SimPacket(msg.Destination, msg.Source, 
+                    new IOException("Connection refused"),
+                    0,
+                    SimFlag.Reset
+                    );
+                
+                
+                SendPacket(back);
                 return;
             }
              // https://eklitzke.org/how-tcp-sockets-work
             
-            socket.Deliver(msg, from);
+            socket.Deliver(msg);
         }
         
         
@@ -97,9 +101,14 @@ namespace SimMach.Sim {
             
             
             // handshake
-            await conn.Write("SYN");
-            await conn.Read(5.Sec());
-            await conn.Write("ACK");
+            await conn.Write(null, SimFlag.Syn);
+            
+            var response = await conn.Read(5.Sec());
+            if (response.Flag != (SimFlag.Ack | SimFlag.Syn)) {
+                await conn.Write(null, SimFlag.Reset);
+                
+            }
+            await conn.Write(null, SimFlag.Ack);
             
             return new ClientConn(conn);
             
@@ -107,13 +116,38 @@ namespace SimMach.Sim {
         }
     }
 
+    [Flags]
+    public enum SimFlag : byte {
+        None = 0x00,
+        Fin = 0x01,
+        Reset = 0x04,
+        Ack = 0x10,
+        Syn = 0x02,
+    }
+
     public class SimPacket {
+        public readonly SimEndpoint Source;
+        public readonly SimEndpoint Destination;
+        
         public readonly object Payload;
         public readonly int SeqNumber;
+        public readonly SimFlag Flag;
 
-        public SimPacket(object payload, int seqNumber) {
+        public SimPacket(SimEndpoint source, SimEndpoint destination, object payload, int seqNumber, SimFlag flag) {
+            Source = source;
+            Destination = destination;
             Payload = payload;
             SeqNumber = seqNumber;
+            Flag = flag;
+        }
+
+        public string Body() {
+            var body = Payload == null ? "" : Payload.ToString();
+            if (Flag != SimFlag.None) {
+                body += $" {Flag.ToString().ToUpperInvariant()}";
+            }
+
+            return body.Trim();
         }
     }
     
@@ -136,22 +170,12 @@ namespace SimMach.Sim {
             _proc = proc;
         }
 
-        public async Task Write(object message) {
+        public async Task Write(object message, SimFlag flag = SimFlag.None) {
             if (_closed) {
                 throw new IOException("Socket closed");
             }
-            // we don't wait for the ACK.
-            // but add latency for putting on the wire
-            //await _env.Delay(1.Ms(), _env.Token);
-            
-            var id = $"{_socket.Endpoint}->{_remote}|{_sequence}";
-
-            using (_proc.TraceScope("Write")) {
-                await _proc.Delay(1, _proc.Token);
-                _proc.FlowStart(message.ToString(), id.GetHashCode().ToString());
-            }
-
-            _socket.SendMessage(_remote, new SimPacket(message, _sequence));
+            var packet = new SimPacket(_socket.Endpoint, _remote,  message, _sequence, flag);
+            _socket.SendMessage(packet);
             _sequence++;
         }
 
@@ -159,7 +183,7 @@ namespace SimMach.Sim {
         bool _closed;
 
         bool NextIsFin() {
-            return _incoming.Count == 1 && _incoming.Peek().Payload == SimTcp.FIN;
+            return _incoming.Count == 1 && _incoming.Peek().Flag == SimFlag.Fin;
         }
 
 
@@ -168,15 +192,8 @@ namespace SimMach.Sim {
             _closed = true;
         }
 
-        public async Task TraceRead(SimPacket msg) {
-            var id = $"{_remote}->{_socket.Endpoint}|{msg.SeqNumber}";
-            _proc.FlowEnd(msg.Payload.ToString(), id.GetHashCode().ToString());
-            using (_proc.TraceScope("Read")) {
-                await _proc.Delay(1, _proc.Token);
-            }
-        }
 
-        public async Task<object> Read(TimeSpan timeout) {
+        public async Task<SimPacket> Read(TimeSpan timeout) {
 
             if (_closed) {
                 throw new IOException("Socket closed");
@@ -184,32 +201,40 @@ namespace SimMach.Sim {
 
             if (_incoming.TryDequeue(out var tuple)) {
 
-                if (NextIsFin()) {
-                    Close(SimTcp.FIN);
+                if (tuple.Flag == SimFlag.Reset) {
+                    Close("RESET");
+                    throw new IOException("Connection reset");
                 }
 
-                await TraceRead(tuple);
-                return tuple.Payload;
+                if (NextIsFin()) {
+                    Close("FIN");
+                }
+
+                return tuple;
             }
 
             _pendingRead = _proc.Promise<SimPacket>(timeout, _proc.Token);
-
+            
+            
 
             var msg = await _pendingRead.Task;
+
+            if (msg.Flag == SimFlag.Reset) {
+                Close("RESET");
+                throw new IOException("Connection reset");
+            }
             
             if (NextIsFin()) {
                 Close("FIN");
             }
             
-            await TraceRead(msg);
-
-            return msg.Payload;
+            return msg;
 
         }
 
         public void Dispose() {
             if (!_closed) {
-                Write(SimTcp.FIN);
+                Write(null, SimFlag.Fin);
                 Close("Dispose");
             }
             
@@ -244,7 +269,12 @@ namespace SimMach.Sim {
         }
 
         public async Task<object> Read(TimeSpan timeout) {
-            return await _conn.Read(timeout);
+            try {
+                var msg = await _conn.Read(timeout);
+                return msg.Payload;
+            } catch (TimeoutException ex) {
+                throw new IOException("Read timeout", ex);
+            }
         }
     }
 
@@ -253,13 +283,7 @@ namespace SimMach.Sim {
         Task<IConn> Accept();
     }
 
-    public static class SimTcp {
-        public static readonly string SYN = "SYN";
-        public static readonly string FIN = "FIN";
-        public static readonly string ACK = "ACK";
-        public static readonly string SYN_ACK = "SYN_ACK";
-    }
-
+    
 
 
 
@@ -300,27 +324,29 @@ namespace SimMach.Sim {
             return _poll.Task;
         }
 
-        public void Deliver(SimPacket msg, SimEndpoint client) {
+        public void Deliver(SimPacket msg) {
             
-            if (_connections.TryGetValue(client, out var conn)) {
+            
+            if (_connections.TryGetValue(msg.Source, out var conn)) {
                 conn.Deliver(msg);
                 return;
             }
 
-            if (msg.Payload != SimTcp.SYN) {
+            if (msg.Flag != SimFlag.Syn) {
                 Debug("Non-SYN packet was dropped");
                 return;
             }
             
-            conn = new SimConn(this, client, _proc);
-            conn.TraceRead(msg);
-            _connections.Add(client, conn);
+            conn = new SimConn(this, msg.Source, _proc);
+            _connections.Add(msg.Source, conn);
             
             _proc.Schedule(async () => {
-                await conn.Write(SimTcp.SYN_ACK);
-                if (SimTcp.ACK != await conn.Read(5.Sec())) {
+                await conn.Write(null, SimFlag.Ack | SimFlag.Syn);
+                var resp = await conn.Read(5.Sec());
+                if (resp.Flag != SimFlag.Ack) {
                     Debug("Non ACK packet received");
-                    _connections.Remove(client);
+                    await conn.Write(null, SimFlag.Reset);
+                    _connections.Remove(msg.Source);
                     return;
                 }
                 
@@ -337,8 +363,8 @@ namespace SimMach.Sim {
 
         public void Dispose() { }
 
-        public void SendMessage(SimEndpoint remote, SimPacket message) {
-            _net.SendPacket(Endpoint, remote, message);
+        public void SendMessage(SimPacket message) {
+            _net.SendPacket(message);
         }
     }
 
@@ -362,9 +388,9 @@ namespace SimMach.Sim {
         readonly RouteId _route;
         SimScheduler _scheduler;
         readonly TaskFactory _factory;
-        
+
         public void Debug(string l) {
-            
+
             _network.Debug($"  {_route.Full,-34} {l}");
         }
 
@@ -375,19 +401,13 @@ namespace SimMach.Sim {
             _factory = new TaskFactory(_scheduler);
         }
 
-        public Task Send(SimEndpoint client, SimEndpoint server, SimPacket msg) {
-            var text = $"{msg.Payload ?? "null"}";
-            Debug("Send " + text);
+        public Task Send(SimPacket msg) {
+            Debug($"Send {msg.Body()}");
             // TODO: network cancellation
             _factory.StartNew(async () => {
-                using (_network.Trace(client, server, msg)) {
-                    // delivery wait
-
-
-                    await SimDelayTask.Delay(50);
-                    _network.InternalDeliver(client, server, msg);
-                }
-
+                // delivery wait
+                await SimDelayTask.Delay(50);
+                _network.InternalDeliver(msg);
             });
             return Task.FromResult(true);
         }

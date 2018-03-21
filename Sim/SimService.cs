@@ -34,7 +34,6 @@ namespace SimMach.Sim {
 
             var procID = _runtime.NextProcID();
             var env = new SimProc(_id, _runtime, procID, _factory);
-            _runtime.Tracer.ProcessName(procID, _id.ToString());
             
             _task = _factory.StartNew(() => _launcher(env).ContinueWith(done)).Unwrap();
             _proc = env;

@@ -11,7 +11,6 @@ namespace SimMach.Sim {
         public TimeSpan MaxTime = TimeSpan.MaxValue;
         public long MaxSteps = long.MaxValue;
         public bool DebugNetwork;
-        public string TraceFile;
 
 
 
@@ -27,13 +26,7 @@ namespace SimMach.Sim {
 
             env.Network.DebugPackets = DebugNetwork;
 
-            if (TraceFile != null) {
-                using (var f = File.Create(TraceFile)) {
-                    env.Run(f);
-                }
-            } else {
                 env.Run();
-            }
         }
 
         public void RunScript(Func<IEnv, Task> script) {

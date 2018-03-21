@@ -1,50 +1,109 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices.ComTypes;
 using System.Threading.Tasks;
 using NUnit.Framework;
 
 namespace SimMach.Sim {
     public sealed class NetworkingTests {
-        [Test]
-        public void RequestReplyTest() {
-            var run = new TestRuntime() {
-                MaxTime = 2.Minutes(),
-                DebugNetwork = true,
-                TraceFile = "/Users/rinat/proj/core/SimMach/traces/trace.json"
-            };
 
+        [Test]
+        public void NoRouteToHost() {
+            var run = NewTestRuntime();
+            
+            var responses = new List<object>();
+            AddHelloWorldClient(run, "server", responses);
+
+            run.RunAll();
+            AssertOneError(responses);
+        }
+
+        [Test]
+        public void ConnectionRefused() {
+            var run = NewTestRuntime();
+            
+            run.Net.Link("localhost", "server");
+            
+            var responses = new List<object>();
+            AddHelloWorldClient(run, "server", responses);
+            
+            run.RunAll();
+            
+            AssertOneError(responses, "Connection refused");
+        }
+        
+        [Test]
+        public void ServerTimeout() {
+            var run = NewTestRuntime();
+
+            var responses = new List<object>();
+            run.Net.Link("localhost", "server");
+            AddHelloWorldClient(run, "server", responses);
+            
+            run.Services.Add("server:dead", async env => {
+                using (var socket = await env.Bind(80)) {
+                    while (!env.Token.IsCancellationRequested) {
+                        await env.Delay(10.Minutes());
+                    }
+                }
+            });
+            
+            run.RunAll();
+            
+            AssertOneError(responses, "timeout");
+        }
+
+        static void AssertOneError(List<object> responses, string match = null) {
+            Assert.AreEqual(1, responses.Count);
+            Assert.IsInstanceOf<IOException>(responses.First());
+
+            if (match != null) {
+                var msg= responses.OfType<IOException>().First().Message;
+                StringAssert.Contains(match, msg);
+            }
+        }
+
+        [Test]
+        public void RequestReply() {
+            var run = NewTestRuntime();
+
+            var requests = new List<object>();
+            var responses = new List<object>();
+
+            run.Net.Link("localhost", "server");
+            
+            AddHelloWorldClient(run, "server", responses);
+            AddHelloWorldServer(run, "server", requests);
+
+            run.RunAll();
+
+            CollectionAssert.AreEquivalent(new object[]{"Hello"}, requests);
+            CollectionAssert.AreEquivalent(new object[]{"World"}, responses);
+        }
+        
+        [Test]
+        public void RequestReplyThroughTheProxy() {
+            var run = NewTestRuntime();
             var requests = new List<object>();
             var responses = new List<object>();
 
             run.Net.Link("localhost", "proxy");
             run.Net.Link("proxy", "server");
 
-            run.Services.Add("localhost:console", async env => {
-                using (var conn = await env.Connect("proxy", 80)) {
-                    await conn.Write("Hello");
-                    var response = await conn.Read(5.Sec());
-                    responses.Add(response);
-                }
-            });
-            run.Services.Add("proxy:engine", async env => {
-                async void Handler(IConn conn) {
-                    using (conn) {
-                        var msg = await conn.Read(5.Sec());
-                        using (var outgoing = await env.Connect("server", 80)) {
-                            await outgoing.Write(msg);
-                            var response = await outgoing.Read(5.Sec());
-                            await conn.Write(response);
-                        }
-                    }
-                }
-                using (var socket = await env.Bind(80)) {
-                    while (!env.Token.IsCancellationRequested) {
-                        Handler(await socket.Accept());
-                    }
-                }
-            });
-            run.Services.Add("server:engine", async env => {
+            AddHelloWorldClient(run, "proxy", responses);
+            AddHelloWorldProxy(run, "proxy", "server");
+            AddHelloWorldServer(run, "server", requests);
+
+            run.RunAll();
+
+            CollectionAssert.AreEquivalent(new object[]{"Hello"}, requests);
+            CollectionAssert.AreEquivalent(new object[]{"World"}, responses);
+        }
+
+        static void AddHelloWorldServer(TestRuntime run, string endpoint, List<object> requests) {
+            run.Services.Add(endpoint + ":engine", async env => {
                 async void Handler(IConn conn) {
                     using (conn) {
                         var msg = await conn.Read(5.Sec());
@@ -52,29 +111,68 @@ namespace SimMach.Sim {
                         await conn.Write("World");
                     }
                 }
+
                 using (var socket = await env.Bind(80)) {
                     while (!env.Token.IsCancellationRequested) {
                         Handler(await socket.Accept());
                     }
                 }
             });
-
-            run.RunAll();
-
-            CollectionAssert.AreEquivalent(new object[]{"Hello"}, requests);
-            CollectionAssert.AreEquivalent(new object[]{"World"}, responses);
-            
         }
-        
-        
-        
-        [Test]
-        public void SubscribeTest() {
+
+       
+
+        static void AddHelloWorldProxy(TestRuntime run, string endpoint, string target) {
+            
+            run.Services.Add(endpoint + ":engine", async env => {
+            
+                async void Handler(IConn conn) {
+                    using (conn) {
+                        var msg = await conn.Read(5.Sec());
+                        using (var outgoing = await env.Connect(target, 80)) {
+                            await outgoing.Write(msg);
+                            var response = await outgoing.Read(5.Sec());
+                            await conn.Write(response);
+                        }
+                    }
+                }
+
+                using (var socket = await env.Bind(80)) {
+                    while (!env.Token.IsCancellationRequested) {
+                        Handler(await socket.Accept());
+                    }
+                }
+
+            });
+        }
+
+        static TestRuntime NewTestRuntime() {
             var run = new TestRuntime() {
                 MaxTime = 2.Minutes(),
-                DebugNetwork = true,
-                TraceFile = "/Users/rinat/proj/core/SimMach/traces/trace.json"
+                DebugNetwork = true
             };
+            return run;
+        }
+
+        static void AddHelloWorldClient(TestRuntime run, string endpoint, List<object> responses) {
+            run.Services.Add("localhost:console", async env => {
+                try {
+                    using (var conn = await env.Connect(endpoint, 80)) {
+                        await conn.Write("Hello");
+                        var response = await conn.Read(5.Sec());
+                        responses.Add(response);
+                    }
+                } catch (IOException ex) {
+                    env.Debug(ex.Message);
+                    responses.Add(ex);
+                }
+            });
+        }
+
+
+        [Test]
+        public void SubscribeTest() {
+            var run = NewTestRuntime();
 
             var eventsReceived = 0;
             var eventsToSend = 5;
