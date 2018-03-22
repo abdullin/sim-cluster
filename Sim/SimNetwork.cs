@@ -104,7 +104,7 @@ namespace SimMach.Sim {
 
         // maintain and send connection ID;
         readonly SimSocket _socket;
-        readonly SimEndpoint _remote;
+        public readonly SimEndpoint RemoteAddress;
         readonly SimProc _proc;
         int _sequence;
         
@@ -113,9 +113,9 @@ namespace SimMach.Sim {
 
         readonly Queue<SimPacket> _incoming = new Queue<SimPacket>();
 
-        public SimConn(SimSocket socket, SimEndpoint remote, SimProc proc) {
+        public SimConn(SimSocket socket, SimEndpoint remoteAddress, SimProc proc) {
             _socket = socket;
-            _remote = remote;
+            RemoteAddress = remoteAddress;
             _proc = proc;
         }
 
@@ -123,7 +123,7 @@ namespace SimMach.Sim {
             if (_closed) {
                 throw new IOException("Socket closed");
             }
-            var packet = new SimPacket(_socket.Endpoint, _remote,  message, _sequence, flag);
+            var packet = new SimPacket(_socket.Endpoint, RemoteAddress,  message, _sequence, flag);
             _socket.SendMessage(packet);
             _sequence++;
         }
@@ -208,6 +208,8 @@ namespace SimMach.Sim {
         }
 
         readonly SimConn _conn;
+
+        public SimEndpoint RemoteAddress => _conn.RemoteAddress;
         
         public void Dispose() {
             _conn.Dispose();

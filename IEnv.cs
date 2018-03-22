@@ -31,6 +31,7 @@ namespace SimMach {
     public interface IConn : IDisposable {
         Task Write(object message);
         Task<object> Read(TimeSpan timeout);
+        SimEndpoint RemoteAddress { get; }
     }
 
 

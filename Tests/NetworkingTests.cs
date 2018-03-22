@@ -173,7 +173,7 @@ namespace SimMach.Sim {
         static TestRuntime NewTestRuntime() {
             var run = new TestRuntime() {
                 MaxTime = 2.Minutes(),
-                DebugNetwork = true
+                //DebugNetwork = true
             };
             return run;
         }
@@ -192,6 +192,62 @@ namespace SimMach.Sim {
                 }
             });
         }
+
+        [Test]
+        public void EachOutgoingConnectionIsOnItsOwnSocket() {
+            var run = NewTestRuntime();
+            run.Net.Link("localhost", "api");
+
+            async Task SendAndWait(IEnv env, IConn sock) {
+                using (sock) {
+                    await sock.Write("HI");
+                    await env.Delay(2.Minutes(), env.Token);
+                }
+            }
+            
+            int connections = 0;
+            var expectedConnections = 1000;
+            HashSet<ushort> ports = new HashSet<ushort>();
+
+            async Task Receive(IConn conn) {
+                using (conn) {
+
+                    await conn.Read(5.Sec());
+                }
+            }
+
+
+
+
+
+            run.Svc.Add("localhost", async env => {
+                for (int i = 0; i < expectedConnections; i++) {
+                    var conn = await env.Connect("api", 80);
+                    SendAndWait(env, conn);
+                }
+            });
+            
+            
+            
+            run.Svc.Add("api", async env => {
+                while (!env.Token.IsCancellationRequested) {
+                    using (var sock = await env.Bind(80)) {
+                        var conn = await sock.Accept();
+                        connections++;
+                        ports.Add(conn.RemoteAddress.Port);
+                        Receive(conn);
+                    }
+                }
+                    
+            });
+            
+            run.RunAll();
+            
+            Assert.AreEqual(expectedConnections, ports.Count, "port per conn");
+            Assert.AreEqual(expectedConnections, connections);
+        }
+
+        
 
 
         [Test]
