@@ -206,19 +206,14 @@ namespace SimMach.Sim {
             }
             
             int connections = 0;
-            var expectedConnections = 1000;
+            var expectedConnections = 10;
             HashSet<ushort> ports = new HashSet<ushort>();
 
             async Task Receive(IConn conn) {
                 using (conn) {
-
                     await conn.Read(5.Sec());
                 }
             }
-
-
-
-
 
             run.Svc.Add("localhost", async env => {
                 for (int i = 0; i < expectedConnections; i++) {
@@ -226,19 +221,18 @@ namespace SimMach.Sim {
                     SendAndWait(env, conn);
                 }
             });
-            
-            
-            
+
+
+
             run.Svc.Add("api", async env => {
-                while (!env.Token.IsCancellationRequested) {
-                    using (var sock = await env.Bind(80)) {
+                using (var sock = await env.Bind(80)) {
+                    while (!env.Token.IsCancellationRequested) {
                         var conn = await sock.Accept();
                         connections++;
                         ports.Add(conn.RemoteAddress.Port);
                         Receive(conn);
                     }
                 }
-                    
             });
             
             run.RunAll();

@@ -43,14 +43,13 @@ namespace SimMach.Sim {
 
         public void Deliver(SimPacket msg) {
             
-            
             if (_connections.TryGetValue(msg.Source, out var conn)) {
                 conn.Deliver(msg);
                 return;
             }
 
             if (msg.Flag != SimFlag.Syn) {
-                Debug("Non-SYN packet was dropped");
+                Debug($"Drop non SYN: {msg.Body()}");
                 return;
             }
             

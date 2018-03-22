@@ -90,6 +90,10 @@ namespace SimMach.Sim {
             Flag = flag;
         }
 
+        public override string ToString() {
+            return $"{Source}->{Destination}: {Body()}";
+        }
+
         public string Body() {
             var body = Payload == null ? "" : Payload.ToString();
             if (Flag != SimFlag.None) {

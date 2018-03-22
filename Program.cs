@@ -15,7 +15,7 @@ namespace SimMach
     class Program {
         static void Main(string[] args) {
 
-            new RuntimeTests().RebootTest();
+            new NetworkingTests().EachOutgoingConnectionIsOnItsOwnSocket();
             
             /*var t = new Topology {
                 {"lb0.eu-west:slow", SlowProcess},
