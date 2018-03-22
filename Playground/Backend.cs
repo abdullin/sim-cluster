@@ -1,22 +1,18 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 
 namespace SimMach.Sim {
     class Backend {
         readonly IEnv _env;
-        
-        readonly int _port;
-
+        readonly ushort _port;
         readonly CommitLogClient _client;
-        
-        
 
-        public Backend(IEnv env, int port, CommitLogClient client) {
+
+        public Backend(IEnv env, ushort port, CommitLogClient client) {
             _env = env;
-            
-            
             _client = client;
             _port = port;
         }

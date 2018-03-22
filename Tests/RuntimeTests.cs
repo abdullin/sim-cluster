@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Reflection.Metadata.Ecma335;
+using System.Threading.Tasks;
 using NUnit.Framework;
 
 namespace SimMach.Sim {
@@ -9,7 +10,8 @@ namespace SimMach.Sim {
             var bootCount = 0;
 
             var test = new TestRuntime() {
-                MaxTime = TimeSpan.FromMinutes(2)
+                MaxTime = 2.Minutes(),
+                MaxInactive = 2.Minutes()
             };
 
             test.Svc.Add("com:test", async env => {

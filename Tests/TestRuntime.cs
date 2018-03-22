@@ -10,6 +10,7 @@ namespace SimMach.Sim {
         public readonly NetworkDef Net = new NetworkDef();
         
         public TimeSpan MaxTime = TimeSpan.MaxValue;
+        public TimeSpan? MaxInactive = TimeSpan.MaxValue;
         public long MaxSteps = long.MaxValue;
         public bool DebugNetwork;
 
@@ -22,6 +23,10 @@ namespace SimMach.Sim {
                 MaxSteps = MaxSteps,
                 MaxTime = MaxTime
             };
+
+            if (MaxInactive.HasValue) {
+                env.MaxInactive = MaxInactive.Value;
+            }
             
             
             env.Plan(plan);

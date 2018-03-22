@@ -10,9 +10,9 @@ namespace SimMach.Sim {
 
 
         readonly IEnv _env;
-        readonly int _port;
+        readonly ushort _port;
 
-        public CommitLog(IEnv env, int port) {
+        public CommitLog(IEnv env, ushort port) {
             _env = env;
             _port = port;
         }

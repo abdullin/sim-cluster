@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace SimMach.Sim {
@@ -32,7 +31,6 @@ namespace SimMach.Sim {
         }
 
         readonly Dictionary<RouteId, SimRoute> _routes = new Dictionary<RouteId, SimRoute>(RouteId.Comparer);
-        readonly Dictionary<SimEndpoint, SimSocket> _sockets = new Dictionary<SimEndpoint, SimSocket>(SimEndpoint.Comparer);
         
 
         public void SendPacket(SimPacket packet) {
@@ -42,88 +40,29 @@ namespace SimMach.Sim {
 
 
         public void InternalDeliver(SimPacket msg) {
-            if (!_sockets.TryGetValue(msg.Destination, out var socket)) {
-                // socket not bound
+            if (_runtime.ResolveHost(msg.Destination.Machine, out var machine)) {
+                if (machine.TryDeliver(msg)) {
+                    return; 
+                }
                 
-                var back = new SimPacket(msg.Destination, msg.Source, 
-                    new IOException("Connection refused"),
-                    0,
-                    SimFlag.Reset
-                    );
+
+            }
+            
+            var back = new SimPacket(msg.Destination, msg.Source, 
+                new IOException("Connection refused"),
+                0,
+                SimFlag.Reset
+            );
                 
                 
-                SendPacket(back);
-                return;
-            }
-             // https://eklitzke.org/how-tcp-sockets-work
-            
-            socket.Deliver(msg);
-        }
-        
-        
-
-        public async Task<ISocket> Bind(SimProc proc, int port, TimeSpan timeout) {
-            // socket is bound to the owner
-            var endpoint = new SimEndpoint(proc.Id.Machine, port);
-
-            if (_sockets.ContainsKey(endpoint)) {
-                throw new IOException($"Address {endpoint} in use");
-            }
-
-            var socket = new SimSocket(proc, endpoint, this);
-            _sockets.Add(endpoint, socket);
-
-            proc.RegisterSocket(socket);
-
-            return socket;
+            SendPacket(back);
         }
 
-        int _socketId = 1000;
-
-        public async Task<IConn> Connect(SimProc process, SimEndpoint server) {
-            var linkId = new RouteId(process.Id.Machine, server.Machine);
-            if (!_routes.TryGetValue(linkId, out var link)) {
-                throw new IOException($"Route not found: {linkId}");
-            }
-
-            
-            // todo: allocate port
-            // todo: allow Azure SNAT delay scenario
-            var clientEndpoint = new SimEndpoint(process.Id.Machine, _socketId ++);
-            
-            // do we have a real connection already?
-            // if yes - then reuse
-            
-
-            var clientSocket = new SimSocket(process, clientEndpoint, this);
-            _sockets.Add(clientEndpoint, clientSocket);
-
-            
-            var conn = new SimConn(clientSocket, server, process);
-            
-            clientSocket._connections.Add(server, conn);
-            
-            
-            // handshake
-            await conn.Write(null, SimFlag.Syn);
-            
-            var response = await conn.Read(5.Sec());
-            if (response.Flag != (SimFlag.Ack | SimFlag.Syn)) {
-                await conn.Write(null, SimFlag.Reset);
-                clientSocket._connections.Remove(server);
-                throw new IOException("Failed to connect");
-
-            }
-            await conn.Write(null, SimFlag.Ack);
-            
-            return new ClientConn(conn);
-            
-            
+        public bool TryGetRoute(string from, string to, out SimRoute r) {
+            var linkId = new RouteId(from, to);
+            return _routes.TryGetValue(linkId, out r);
         }
 
-        public void ReleaseSocket(SimSocket simSocket, SimProc proc) {
-            _sockets.Remove(simSocket.Endpoint);
-        }
     }
 
     [Flags]
@@ -293,97 +232,11 @@ namespace SimMach.Sim {
         Task<IConn> Accept();
     }
 
-    
-
-
-
-    sealed class SimSocket : ISocket {
-        readonly SimProc _proc;
-        public readonly SimEndpoint Endpoint;
-        readonly SimNetwork _net;
-        
-
-
-        public readonly Dictionary<SimEndpoint, SimConn> _connections =
-            new Dictionary<SimEndpoint, SimConn>(SimEndpoint.Comparer);
-
-        readonly Queue<IConn> _incoming = new Queue<IConn>();
-
-        SimFuture<IConn> _poll;
-
-        public SimSocket(SimProc proc, SimEndpoint endpoint, SimNetwork net) {
-            _proc = proc;
-            Endpoint = endpoint;
-            _net = net;
-        }
-
-        public void Debug(string message) {
-            _proc.Debug(message);
-        }
-
-        public Task<IConn> Accept() {
-            if (_incoming.TryDequeue(out var conn)) {
-                return Task.FromResult<IConn>(conn);
-            }
-
-            if (_poll != null) {
-                throw new IOException("There is a wait already");
-            }
-
-            _poll = _proc.Promise<IConn>(Timeout.InfiniteTimeSpan, _proc.Token);
-            return _poll.Task;
-        }
-
-        public void Deliver(SimPacket msg) {
-            
-            
-            if (_connections.TryGetValue(msg.Source, out var conn)) {
-                conn.Deliver(msg);
-                return;
-            }
-
-            if (msg.Flag != SimFlag.Syn) {
-                Debug("Non-SYN packet was dropped");
-                return;
-            }
-            
-            conn = new SimConn(this, msg.Source, _proc);
-            _connections.Add(msg.Source, conn);
-            
-            _proc.Schedule(async () => {
-                await conn.Write(null, SimFlag.Ack | SimFlag.Syn);
-                var resp = await conn.Read(5.Sec());
-                if (resp.Flag != SimFlag.Ack) {
-                    Debug("Non ACK packet received");
-                    await conn.Write(null, SimFlag.Reset);
-                    _connections.Remove(msg.Source);
-                    return;
-                }
-                
-                var ready = new ClientConn(conn);
-            
-                if (_poll != null) {
-                    _poll.SetResult(ready);
-                    _poll = null;
-                } else {
-                    _incoming.Enqueue(ready);    
-                }
-            });
-        }
-
-        public void Dispose() {
-            _net.ReleaseSocket(this, _proc);
-        }
-
-        public void SendMessage(SimPacket message) {
-            _net.SendPacket(message);
-        }
-    }
 
     public sealed class SimEndpoint {
         public readonly string Machine;
-        public readonly int Port;
-        public SimEndpoint(string machine, int port) {
+        public readonly ushort Port;
+        public SimEndpoint(string machine, ushort port) {
             Machine = machine;
             Port = port;
         }
@@ -396,7 +249,7 @@ namespace SimMach.Sim {
 
         public static implicit operator SimEndpoint(string addr) {
             var args = addr.Split(":");
-            return new SimEndpoint(args[0], int.Parse(args[1]));
+            return new SimEndpoint(args[0], ushort.Parse(args[1]));
         }
     }
 

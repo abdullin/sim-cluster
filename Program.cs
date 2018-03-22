@@ -15,7 +15,7 @@ namespace SimMach
     class Program {
         static void Main(string[] args) {
 
-            new EdaSetups().Playground();
+            new RuntimeTests().RebootTest();
             
             /*var t = new Topology {
                 {"lb0.eu-west:slow", SlowProcess},

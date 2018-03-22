@@ -5,11 +5,11 @@ using System.Threading.Tasks;
 
 namespace SimMach.Sim {
     sealed class SimScheduler : TaskScheduler {
-        readonly SimRuntime _sim;
+        readonly SimRuntime _runtime;
         readonly ServiceId _name;
 
-        public SimScheduler(SimRuntime sim, ServiceId name) {
-            _sim = sim;
+        public SimScheduler(SimRuntime runtime, ServiceId name) {
+            _runtime = runtime;
             _name = name;
         }
 
@@ -25,7 +25,7 @@ namespace SimMach.Sim {
                 }
             } 
             catch (Exception ex) {
-                _sim.Debug($"Failed executing {task} on {_name} {ex.Demystify()}");
+                _runtime.Debug($"Failed executing {task} on {_name} {ex.Demystify()}");
             }
 
         }
@@ -38,11 +38,11 @@ namespace SimMach.Sim {
             
             switch (task) {
                 case IFutureJump ft:
-                    _sim.Schedule(this, ft.Deadline, ft);
+                    _runtime.Schedule(this, ft.Deadline, ft);
                     break;
                 
                 default:
-                    _sim.Schedule(this, TimeSpan.Zero, task);
+                    _runtime.Schedule(this, TimeSpan.Zero, task);
                     break;
             }
         }

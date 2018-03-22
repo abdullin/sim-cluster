@@ -4,11 +4,9 @@ using System.Threading.Tasks;
 using SimMach.Sim;
 
 namespace SimMach.Sim {
-    
-    
     class SimService {
-        readonly ServiceId _id;
-        readonly Func<SimProc, Task> _launcher;
+        public readonly ServiceId Id;
+        readonly Func<IEnv, Task> _launcher;
         
         Task _task;
         SimProc _proc;
@@ -16,24 +14,24 @@ namespace SimMach.Sim {
         
         readonly SimScheduler _scheduler;
         readonly TaskFactory _factory;
-        readonly SimRuntime _runtime;
+        readonly SimMachine _machine;
 
-        public SimService(SimRuntime runtime, ServiceId id, Func<SimProc, Task> launcher) {
-            _id = id;
+        public SimService(SimMachine machine, ServiceId id, Func<IEnv, Task> launcher) {
+            Id = id;
             _launcher = launcher;
-            _runtime = runtime;
+            _machine = machine;
             
-            _scheduler = new SimScheduler(runtime, id);
+            _scheduler = new SimScheduler(machine.Runtime, id);
             _factory = new TaskFactory(_scheduler);
         }
 
         public void Launch(Action<Task> done) {
             if (_task != null && !_task.IsCompleted) {
-                throw new InvalidOperationException($"Can't launch {_id} while previous instance is {_task.Status}");
+                throw new InvalidOperationException($"Can't launch {Id} while previous instance is {_task.Status}");
             }
 
-            var procID = _runtime.NextProcID();
-            var env = new SimProc(_id, _runtime, procID, _factory);
+            var procID = _machine.NextProcID();
+            var env = new SimProc(Id, _machine, procID, _factory);
             
             _task = _factory.StartNew(() => _launcher(env).ContinueWith(done)).Unwrap();
             _proc = env;
@@ -50,14 +48,9 @@ namespace SimMach.Sim {
             var finished = await Task.WhenAny(_task, _proc.Delay(grace, CancellationToken.None));
             if (finished != _task) {
                 _proc.Debug("Shutdown timeout. ERASING FUTURE to KILL");
-                _runtime.FutureQueue.Erase(_scheduler);
+                _machine.Runtime.FutureQueue.Erase(_scheduler);
                 _proc.Kill();
             }
-
-            
-            
-            
-
             _proc = null;
             _task = null;
         }

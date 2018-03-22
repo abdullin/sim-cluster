@@ -13,16 +13,16 @@ namespace SimMach {
 
         TimeSpan Time { get; }
         Task<IConn> Connect(SimEndpoint endpoint);
-        Task<ISocket> Bind(int port, TimeSpan timeout);
+        Task<ISocket> Bind(ushort port, TimeSpan timeout);
         
     }
 
     public static class ExtendIEnv {
-        public static Task<ISocket> Bind(this IEnv env, int port) {
+        public static Task<ISocket> Bind(this IEnv env, ushort port) {
             return env.Bind(port, Timeout.InfiniteTimeSpan);
         }
 
-        public static Task<IConn> Connect(this IEnv env,string server, int port) {
+        public static Task<IConn> Connect(this IEnv env,string server, ushort port) {
             return env.Connect(new SimEndpoint(server, port));
         }
     }

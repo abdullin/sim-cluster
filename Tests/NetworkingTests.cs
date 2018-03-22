@@ -25,6 +25,7 @@ namespace SimMach.Sim {
             var run = NewTestRuntime();
             
             run.Net.Link("localhost", "server");
+            run.Net.TraceRoute("localhost", "server");
             
             var responses = new List<object>();
             AddHelloWorldClient(run, "server", responses);

@@ -10,13 +10,13 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace SimMach.Sim {
-
-    
-    
-
-
     class SimRuntime : ISimPlan {
-        public readonly Dictionary<ServiceId, SimService> Services;
+        readonly Dictionary<string, SimMachine> _machines = new Dictionary<string, SimMachine>();
+
+        public bool ResolveHost(string name, out SimMachine m) {
+            return _machines.TryGetValue(name, out m);
+        }
+        
         public readonly SimNetwork Network;
         
         
@@ -28,6 +28,10 @@ namespace SimMach.Sim {
             set { MaxTicks = value.Ticks; }
         }
 
+        public TimeSpan MaxInactive {
+            set { _maxInactiveTicks = value.Ticks; }
+        }
+
         long _steps;
         long _time;
 
@@ -35,11 +39,6 @@ namespace SimMach.Sim {
         public long MaxSteps = long.MaxValue;
         
         long _maxInactiveTicks = TimeSpan.FromSeconds(60).Ticks;
-
-        int _procs;
-        public int NextProcID() {
-            return ++_procs;
-        }
 
         int _traces;
 
@@ -51,8 +50,18 @@ namespace SimMach.Sim {
         readonly TaskFactory _factory;
 
         public SimRuntime(MachineDef topology, NetworkDef net) {
-            Services = topology.Dictionary.ToDictionary(p => p.Key, p => new SimService(this, p.Key, p.Value));
+
             Network = new SimNetwork(net, this);
+            
+            foreach (var machine in topology.Dictionary.GroupBy(i => i.Key.Machine)) {
+                var m = new SimMachine(machine.Key, this, Network);
+
+                foreach (var pair in machine) {
+                    m.Install(pair.Key, pair.Value);
+                }
+                _machines.Add(machine.Key, m);
+            }
+            
             
             _scheduler = new SimScheduler(this,new ServiceId("simulation:proc"));
             _factory = new TaskFactory(_scheduler);
@@ -79,10 +88,10 @@ namespace SimMach.Sim {
 
         IEnumerable<SimService> Filter(Predicate<ServiceId> filter) {
             if (null == filter) {
-                return Services.Values;
+                return _machines.SelectMany(p => p.Value.Services.Values);
             }
 
-            return Services.Where(p => filter(p.Key)).Select(p => p.Value);
+            return _machines.SelectMany(p => p.Value.Services.Values).Where(p => filter(p.Id));
         }
         
         long _lastDebug;
@@ -201,15 +210,6 @@ namespace SimMach.Sim {
         Task ISimPlan.StopServices(Predicate<ServiceId> selector = null, TimeSpan? grace = null) {
             var tasks = Filter(selector).Select(p => p.Stop(grace ?? 2.Sec())).ToArray();
             return Task.WhenAll(tasks);
-        }
-
-        
-        public Task<ISocket> Bind(SimProc process, int port, TimeSpan timeout) {
-            return Network.Bind(process, port, timeout);
-        }
-
-        public Task<IConn> Connect(SimProc client, SimEndpoint server) {
-            return Network.Connect(client, server);
         }
     }
 }
