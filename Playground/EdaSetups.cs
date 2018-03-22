@@ -7,7 +7,7 @@ namespace SimMach.Sim {
         [Test]
         public void Playground() {
             var sim = new TestRuntime() {
-                DebugNetwork = true,
+                //DebugNetwork = true,
                 MaxTime = 50.Sec()
             };
             
@@ -22,10 +22,20 @@ namespace SimMach.Sim {
                 var client = new CommitLogClient(env, "mv:443");
                 return new Backend(env, 443, client).Run();
             });
+
+            decimal finalCount = 0M;
             
-            sim.Svc.Add("client", env => {
+            sim.Svc.Add("client", async env => {
                 var lib = new ClientLib(env, "api1:443", "api2:443");
-                return new UserBot(env, 5, lib).FireLoad();
+                const int ringSize = 5;
+                await lib.AddItem(0, 1);
+                for (int i = 0; i < 10; i++) {
+                    var curr = i % ringSize;
+                    var next = (i + 1) % ringSize;
+                    await lib.MoveItem(curr, next, 1);
+                }
+
+                finalCount = await lib.Count();
             });
             
             sim.RunPlan(async plan => {
@@ -37,6 +47,8 @@ namespace SimMach.Sim {
                 plan.Debug("START api1");
                 plan.StartServices(s => s.Machine == "api1");
             });
+            
+            Assert.AreEqual(1M, finalCount, nameof(finalCount));
         }
     }
 }

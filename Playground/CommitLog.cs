@@ -42,13 +42,19 @@ namespace SimMach.Sim {
                         case DownloadRequest dr:
                             await conn.Write(_stored.Skip(dr.From).Take(dr.Count).ToList());
                             return;
-                        default:
+                        case CommitRequest cr:
                             await _env.SimulateWork(5.Ms());
 
-                            _buffer.Enqueue(req);
+                            foreach (var e in cr.Events) {
+                                _buffer.Enqueue(e);    
+                            }
+
+                            
                             ScheduleStore();
                             await conn.Write("OK");
-
+                            return;
+                        default:
+                            conn.Write($"Unknown request {req}");
                             return;
                     }
                 }
@@ -86,10 +92,10 @@ namespace SimMach.Sim {
             _endpoint = endpoint;
         }
 
-        public async Task Commit(object e) {
+        public async Task Commit(params object[] e) {
             _env.Debug($"Commit '{e}' to {_endpoint}");
             using (var conn = await _env.Connect(_endpoint)) {
-                await conn.Write(e);
+                await conn.Write(new CommitRequest(e));
                 await conn.Read(5.Sec());
             }
         }
@@ -102,6 +108,15 @@ namespace SimMach.Sim {
             }
         }
     }
+
+    public sealed class CommitRequest {
+        public IList<Object> Events;
+
+        public CommitRequest(params object[] events) {
+            Events = events;
+        }
+    }
+    
     public sealed class DownloadRequest {
         public readonly int From;
         public readonly int Count;
