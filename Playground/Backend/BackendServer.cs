@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using NUnit.Framework.Constraints;
 using SimMach.Playground.CommitLog;
 
 namespace SimMach.Playground.Backend {
@@ -7,12 +8,20 @@ namespace SimMach.Playground.Backend {
         readonly IEnv _env;
         readonly ushort _port;
         readonly CommitLogClient _client;
+        
+        
+        readonly Db _db;
+        readonly Projection _proj;
 
 
         public BackendServer(IEnv env, ushort port, CommitLogClient client) {
             _env = env;
             _client = client;
             _port = port;
+
+
+            _db = new Db();
+            _proj = new Projection(_db);
         }
 
         public Task Run() {
@@ -32,17 +41,34 @@ namespace SimMach.Playground.Backend {
         int _position;
 
         async Task ProjectionThread() {
+            // TODO: deduplication
             while (!_env.Token.IsCancellationRequested) {
 
                 var events = await _client.Read(_position, int.MaxValue);
-
+                
                 if (events.Count > 0) {
                     _env.Debug($"Projecting {events.Count} events");
+                    foreach (var e in events) {
+                        _proj.Dispatch(e);
+                    }    
                     _position += events.Count;
                 }
 
+                
+
+                
+
                 await _env.Delay(100.Ms());
             }
+        }
+
+        async Task Commit(params object[] events) {
+            foreach (var e in events) {
+                _proj.Dispatch(e);
+            }
+
+            await _client.Commit(events);
+
         }
 
         async Task HandleRequest(IConn conn) {
@@ -56,26 +82,42 @@ namespace SimMach.Playground.Backend {
 
                     switch (req) {
                         case AddItemRequest r:
-                            var evt = new ItemAdded(r.ItemID, r.Amount, 0);
-                            await _client.Commit(evt);
-                            await conn.Write(new AddItemResponse(r.ItemID, r.Amount, 0));
+                            await AddItem(conn, r);
                             break;
                         case MoveItemRequest r:
-                            await _client.Commit(
-                                new ItemAdded(r.ToItemID, r.Amount, 0),
-                                new ItemRemoved(r.FromItemID, r.Amount, 0));
-                            await conn.Write(new MoveItemResponse());
+                            await MoveItem(conn, r);
                             break;
                         case CountRequest r:
-                            await conn.Write(new CountResponse(0));
+                            var amount = _db.Count();
+                            await conn.Write(new CountResponse(amount));
                             break;
-
-
                     }
                 } catch (Exception ex) {
-                    _env.Debug($"Error while processing {req}: {ex.Message}");
+                    _env.Halt($"Error while processing {req}: {ex.Message}");
                 }
             }
+        }
+
+        async Task MoveItem(IConn conn, MoveItemRequest moveItemRequest) {
+            var wasFrom = _db.GetItemQuantity(moveItemRequest.FromItemID);
+            var wasTo = _db.GetItemQuantity(moveItemRequest.ToItemID);
+            if (wasFrom < moveItemRequest.Amount) {
+                await conn.Write(new ArgumentException("Insufficient"));
+                return;
+            }
+
+            await Commit(
+                new ItemAdded(moveItemRequest.ToItemID, moveItemRequest.Amount, wasTo + moveItemRequest.Amount),
+                new ItemRemoved(moveItemRequest.FromItemID, moveItemRequest.Amount, wasFrom - moveItemRequest.Amount));
+            await conn.Write(new MoveItemResponse());
+        }
+
+        async Task AddItem(IConn conn, AddItemRequest addItemRequest) {
+            var quantity = _db.GetItemQuantity(addItemRequest.ItemID);
+            var total = quantity + addItemRequest.Amount;
+            var evt = new ItemAdded(addItemRequest.ItemID, addItemRequest.Amount, total);
+            await Commit(evt);
+            await conn.Write(new AddItemResponse(addItemRequest.ItemID, addItemRequest.Amount, total));
         }
     }
 }

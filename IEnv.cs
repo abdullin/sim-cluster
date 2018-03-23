@@ -14,7 +14,9 @@ namespace SimMach {
         TimeSpan Time { get; }
         Task<IConn> Connect(SimEndpoint endpoint);
         Task<ISocket> Bind(ushort port, TimeSpan timeout);
-        
+
+        void Halt(string message);
+
     }
 
     public static class ExtendIEnv {

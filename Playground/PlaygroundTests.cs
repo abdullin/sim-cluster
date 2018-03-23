@@ -32,21 +32,24 @@ namespace SimMach.Playground {
                 var lib = new BackendClient(env, "api1:443", "api2:443");
                 const int ringSize = 5;
                 await lib.AddItem(0, 1);
-                for (int i = 0; i < 10; i++) {
+                for (int i = 0; i < 5; i++) {
                     var curr = i % ringSize;
                     var next = (i + 1) % ringSize;
                     await lib.MoveItem(curr, next, 1);
+                    await env.Delay(5.Sec());
                 }
+
+                
 
                 finalCount = await lib.Count();
             });
             
             sim.RunPlan(async plan => {
                 plan.StartServices();
-                await plan.Delay(18.Sec());
+                await plan.Delay(6.Sec());
                 plan.Debug("STOP api1");
                 await plan.StopServices(s => s.Machine == "api1");
-                await plan.Delay(10.Sec());
+                await plan.Delay(2.Sec());
                 plan.Debug("START api1");
                 plan.StartServices(s => s.Machine == "api1");
             });

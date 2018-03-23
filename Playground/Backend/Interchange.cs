@@ -28,6 +28,10 @@
             ToItemID = toItemId;
             Amount = amount;
         }
+
+        public override string ToString() {
+            return $"Move {Amount} from {FromItemID} to {ToItemID}";
+        }
     }
 
     public sealed class MoveItemResponse {
@@ -59,7 +63,9 @@
 
 
     public sealed class CountRequest {
-        
+        public override string ToString() {
+            return $"Count request";
+        }
     }
 
     public sealed class CountResponse {
@@ -67,5 +73,10 @@
         public CountResponse(decimal count) {
             Count = count;
         }
+
+        public override string ToString() {
+            return $"Total count is {Count}";
+        }
     }
+   
 }

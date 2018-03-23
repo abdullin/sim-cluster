@@ -17,7 +17,7 @@
 
 
         public override string ToString() {
-            return $"ItemAdded: {Amount} to {ItemID}";
+            return $"Added {Amount} to L{ItemID} ({Total})";
         }
     }
 
@@ -32,7 +32,7 @@
             Total = total;
         }
         public override string ToString() {
-            return $"ItemRemoved: {Amount} from {ItemID}";
+            return $"Removed {Amount} from L{ItemID} ({Total})";
         }
     }
 }

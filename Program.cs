@@ -6,6 +6,7 @@ using System.Numerics;
 using System.Reflection.Metadata.Ecma335;
 using System.Threading;
 using System.Threading.Tasks;
+using SimMach.Playground;
 using SimMach.Sim;
 
 namespace SimMach
@@ -15,33 +16,7 @@ namespace SimMach
     class Program {
         static void Main(string[] args) {
 
-            new NetworkingTests().EachOutgoingConnectionIsOnItsOwnSocket();
-            
-            /*var t = new Topology {
-                {"lb0.eu-west:slow", SlowProcess},
-                {"lb0.eu-west:quick", QuickProcess},
-                {"lb1.eu-west:slow", SlowProcess},
-                {"lb1.eu-west:quick", QuickProcess}
-            };
-            var sim = new SimRuntime(t) {
-                Timeout = TimeSpan.FromSeconds(10)
-            };
-            
-            sim.Plan(async plan => {
-                plan.StartServices();
-                await plan.Delay(1000);
-                
-                plan.Debug($"Power off 'lb1.eu-west' in 2s");
-                await plan.StopServices(s => s.Machine == "lb1.eu-west", 2000);
-                
-                plan.Debug($"'lb1.eu-west' is down. Booting in 3s");
-                await plan.Delay(3000);
-                
-                plan.StartServices(s => s.Machine == "lb1.eu-west");
-                plan.Debug($"'lb1.eu-west' is up and running");
-            });
-            
-            sim.Run();*/
+            new PlaygroundTests().Playground();
         }
 
         static async Task QuickProcess(IEnv env) {

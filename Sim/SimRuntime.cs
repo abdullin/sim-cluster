@@ -125,6 +125,10 @@ namespace SimMach.Sim {
 
         Exception _halt;
 
+        public void Halt(string ex) {
+            _halt = new ApplicationException(ex);
+        }
+
         public void Run(Stream trace = null) {
             _halt = null;
 

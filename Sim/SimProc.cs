@@ -11,7 +11,6 @@ namespace SimMach.Sim {
         public readonly ServiceId Id;
         readonly SimMachine _machine;
 
-
         readonly CancellationTokenSource _cts;
         public CancellationToken Token => _cts.Token;
 
@@ -62,7 +61,12 @@ namespace SimMach.Sim {
         public async Task<ISocket> Bind(ushort port, TimeSpan timeout) {
             return await _machine.Bind(this, port, timeout);
         }
-        
+
+        public void Halt(string message) {
+            Debug(message);
+            _machine.Runtime.Halt(message);
+        }
+
         public void Debug(string l) {
             _machine.Debug($"  {Id.Machine,-13} {l}");
         }
