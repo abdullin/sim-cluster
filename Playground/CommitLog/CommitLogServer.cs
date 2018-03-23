@@ -2,17 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using NUnit.Framework;
 
-namespace SimMach.Sim {
-    public sealed class CommitLog {
-
-
+namespace SimMach.Playground.CommitLog {
+    public sealed class CommitLogServer {
 
         readonly IEnv _env;
         readonly ushort _port;
 
-        public CommitLog(IEnv env, ushort port) {
+        public CommitLogServer(IEnv env, ushort port) {
             _env = env;
             _port = port;
         }
@@ -28,7 +25,6 @@ namespace SimMach.Sim {
                 }
             }    
         }
-        
         
         
         TimeSpan _scheduled = TimeSpan.MinValue;
@@ -81,52 +77,5 @@ namespace SimMach.Sim {
         
         
        
-    }
-
-    public sealed class CommitLogClient {
-        IEnv _env;
-        SimEndpoint _endpoint;
-
-        public CommitLogClient(IEnv env, SimEndpoint endpoint) {
-            _env = env;
-            _endpoint = endpoint;
-        }
-
-        public async Task Commit(params object[] e) {
-            _env.Debug($"Commit '{e}' to {_endpoint}");
-            using (var conn = await _env.Connect(_endpoint)) {
-                await conn.Write(new CommitRequest(e));
-                await conn.Read(5.Sec());
-            }
-        }
-
-        public async Task<IList<object>> Read(int from, int count) {
-            using (var conn = await _env.Connect(_endpoint)) {
-                await conn.Write(new DownloadRequest(from, count));
-                var result = await conn.Read(5.Sec());
-                return (IList<object>) result;
-            }
-        }
-    }
-
-    public sealed class CommitRequest {
-        public IList<Object> Events;
-
-        public CommitRequest(params object[] events) {
-            Events = events;
-        }
-    }
-    
-    public sealed class DownloadRequest {
-        public readonly int From;
-        public readonly int Count;
-        public DownloadRequest(int f, int count) {
-            From = f;
-            Count = count;
-        }
-
-        public override string ToString() {
-            return $"GET [{From}:{From + Count}]";
-        }
     }
 }

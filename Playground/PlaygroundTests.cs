@@ -1,7 +1,10 @@
 ﻿using NUnit.Framework;
+using SimMach.Playground.Backend;
+using SimMach.Playground.CommitLog;
+using SimMach.Sim;
 
-namespace SimMach.Sim {
-    public sealed class EdaSetups {
+namespace SimMach.Playground {
+    public sealed class PlaygroundTests {
 
 
         [Test]
@@ -16,17 +19,17 @@ namespace SimMach.Sim {
             
             sim.Net.TraceRoute("client", "api1");
             
-            sim.Svc.Add("mv", env => new CommitLog(env, 443).Run());
+            sim.Svc.Add("mv", env => new CommitLogServer(env, 443).Run());
 
             sim.Svc.Add(new[] {"api1", "api2"}, env => {
                 var client = new CommitLogClient(env, "mv:443");
-                return new Backend(env, 443, client).Run();
+                return new BackendServer(env, 443, client).Run();
             });
 
             decimal finalCount = 0M;
             
             sim.Svc.Add("client", async env => {
-                var lib = new ClientLib(env, "api1:443", "api2:443");
+                var lib = new BackendClient(env, "api1:443", "api2:443");
                 const int ringSize = 5;
                 await lib.AddItem(0, 1);
                 for (int i = 0; i < 10; i++) {
