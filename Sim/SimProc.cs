@@ -67,6 +67,10 @@ namespace SimMach.Sim {
             _machine.Runtime.Halt(message);
         }
 
+        public string GetLocalFolder(string name) {
+            return _machine.GetServiceFolder(Id.Service, name);
+        }
+
         public void Debug(string l) {
             _machine.Debug($"  {Id.Machine,-13} {l}");
         }

@@ -17,7 +17,7 @@ namespace SimMach {
 
         void Halt(string message);
 
-        //string GetLocalFolder(string name);
+        string GetLocalFolder(string name);
 
     }
 
@@ -50,6 +50,7 @@ namespace SimMach {
     public interface ISimPlan {
         void StartServices(Predicate<ServiceId> selector = null);
         Task StopServices(Predicate<ServiceId> selector = null, TimeSpan? grace = null);
+        void WipeStorage(string machine);
         void Debug(string message);
         Task Delay(int i);
         Task Delay(TimeSpan i);

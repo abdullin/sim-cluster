@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
+using LightningDB;
 using NUnit.Framework.Constraints;
 using SimMach.Playground.CommitLog;
 
@@ -13,17 +15,27 @@ namespace SimMach.Playground.Backend {
         readonly Db _db;
         readonly Projection _proj;
 
+        readonly LightningEnvironment _le;
+        readonly LightningDatabase _ld;
+
 
         public BackendServer(IEnv env, ushort port, CommitLogClient client) {
             _env = env;
             _client = client;
             _port = port;
 
+            var folder = env.GetLocalFolder("db");
 
-            _db = new Db();
+            _le = new LightningEnvironment(folder, new EnvironmentConfiguration() { });
+            _le.Open(EnvironmentOpenFlags.MapAsync);
+
+            using (var tx = _le.BeginTransaction()) {
+                _ld = tx.OpenDatabase(configuration: new DatabaseConfiguration() {Flags = DatabaseOpenFlags.Create});
+                tx.Commit();
+            }
+            
+            _db = new Db(_le, _ld);
             _proj = new Projection(_db);
-            
-            
         }
 
         public Task Run() {
@@ -32,11 +44,15 @@ namespace SimMach.Playground.Backend {
 
         async Task EventLoop() {
 
-            using (var socket = await _env.Bind(_port)) {
-                while (!_env.Token.IsCancellationRequested) {
-                    var conn = await socket.Accept();
-                    HandleRequest(conn);
+            try {
+                using (var socket = await _env.Bind(_port)) {
+                    while (!_env.Token.IsCancellationRequested) {
+                        var conn = await socket.Accept();
+                        HandleRequest(conn);
+                    }
                 }
+            } catch (TaskCanceledException) {
+                // nothing - shutting down
             }
         }
 
@@ -46,16 +62,22 @@ namespace SimMach.Playground.Backend {
             // TODO: deduplication
             while (!_env.Token.IsCancellationRequested) {
 
-                var events = await _client.Read(_position, int.MaxValue);
-                
-                if (events.Count > 0) {
-                    _env.Debug($"Projecting {events.Count} events");
-                    foreach (var e in events) {
-                        _proj.Dispatch(e);
-                    }    
-                    _position += events.Count;
+                try {
+                    var events = await _client.Read(_position, int.MaxValue);
+
+                    if (events.Count > 0) {
+                        _env.Debug($"Projecting {events.Count} events");
+                        foreach (var e in events) {
+                            _proj.Dispatch(e);
+                        }
+
+                        _position += events.Count;
+                    }
+
+                    await _env.Delay(100.Ms());
+                } catch (TaskCanceledException) {
+                    // nothing
                 }
-                await _env.Delay(100.Ms());
             }
         }
 
@@ -90,7 +112,7 @@ namespace SimMach.Playground.Backend {
                             break;
                     }
                 } catch (Exception ex) {
-                    _env.Halt($"Error while processing {req}: {ex.Message}");
+                    _env.Halt($"Error while processing {req}: {ex.Demystify()}");
                 }
             }
         }
@@ -118,7 +140,11 @@ namespace SimMach.Playground.Backend {
         }
 
         public Task Dispose() {
+            _ld.Dispose();
+            _le.Dispose();
+            
             return Task.CompletedTask;
+            
         }
     }
 }

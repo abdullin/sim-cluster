@@ -36,8 +36,9 @@ namespace SimMach.Playground {
             sim.RunPlan(async plan => {
                 plan.StartServices();
                 await plan.Delay(6.Sec());
-                plan.Debug("STOP api1");
-                await plan.StopServices(s => s.Machine == "api1");
+                plan.Debug("REIMAGE api1");
+                await plan.StopServices(s => s.Machine == "api1", grace:1.Sec());
+                plan.WipeStorage("api1");
                 await plan.Delay(2.Sec());
                 plan.Debug("START api1");
                 plan.StartServices(s => s.Machine == "api1");

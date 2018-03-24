@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace SimMach.Sim {
@@ -111,6 +112,35 @@ namespace SimMach.Sim {
             }
 
             return false;
+        }
+        
+        
+
+        public string GetServiceFolder(string service, string name) {
+            var sim = Runtime.GetSimulationFolder();
+
+            var folder = Path.Combine(Name, $"{service}_{name}");
+            var localPath = Path.Combine(sim, folder);
+            if (!Directory.Exists(localPath)) {
+                Debug($"Allocating folder {folder}");
+                Directory.CreateDirectory(localPath);
+            } else {
+                Debug($"Reusing folder {folder}");
+            }
+            
+
+            return localPath;
+        }
+
+        public void WipeStorage() {
+            var sim = Runtime.GetSimulationFolder();
+
+            var machinePath = Path.Combine(sim, Name);
+            if (Directory.Exists(machinePath)) {
+                Debug($"ERASE STORAGE for machine {Name}");
+                Directory.Delete(machinePath, true);
+            }
+          
         }
     }
 }

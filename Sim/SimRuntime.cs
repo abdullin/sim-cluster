@@ -49,6 +49,18 @@ namespace SimMach.Sim {
         readonly SimScheduler _scheduler;
         readonly TaskFactory _factory;
 
+        string _folder;
+
+        public string GetSimulationFolder() {
+            if (_folder != null) {
+                return _folder;
+            }
+
+            var folder = Path.Combine("/Volumes/SimDisk", "sim", DateTime.UtcNow.ToString("yy-MM-dd-HH-mm-ss"));
+            _folder = folder;
+            return folder;
+        }
+
         public SimRuntime(MachineDef topology, NetworkDef net) {
 
             Network = new SimNetwork(net, this);
@@ -106,6 +118,10 @@ namespace SimMach.Sim {
         }
 
 
+        public void WipeStorage(string machine) {
+            _machines[machine].WipeStorage();
+        }
+
         public void Debug(string message) {
             _lastActivity = _time;
             
@@ -136,7 +152,7 @@ namespace SimMach.Sim {
             var reason = "none";
             
             Debug($"{"start".ToUpper()}");
-            
+
             try {
                 var step = 0;
                 while (true) {
@@ -184,6 +200,10 @@ namespace SimMach.Sim {
                 reason = "fatal";
                 _halt = ex;
                 Console.WriteLine("Fatal: " + ex);
+            } finally {
+                if (_folder != null) {
+                    Directory.Delete(_folder, true);
+                }
             }
             
             watch.Stop();
