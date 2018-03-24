@@ -46,14 +46,16 @@ namespace SimMach.Playground {
         }
 
         static void InstallBackend(TestRuntime sim, params string[] servers) {
-            sim.Svc.Add(servers, env => {
-                var client = new CommitLogClient(env, "mv:443");
-                return new BackendServer(env, 443, client).Run();
-            });
+            foreach (var server in servers) {
+                sim.Svc.Add(server, env => {
+                    var client = new CommitLogClient(env, "mv:443");
+                    return new BackendServer(env, 443, client);
+                });    
+            }
         }
 
         static void InstallCommitLog(TestRuntime sim, string service) {
-            sim.Svc.Add(service, env => new CommitLogServer(env, 443).Run());
+            sim.Svc.Add(service, env => new CommitLogServer(env, 443));
         }
     }
 }

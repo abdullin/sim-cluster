@@ -4,7 +4,7 @@ using NUnit.Framework.Constraints;
 using SimMach.Playground.CommitLog;
 
 namespace SimMach.Playground.Backend {
-    class BackendServer {
+    class BackendServer : IEngine {
         readonly IEnv _env;
         readonly ushort _port;
         readonly CommitLogClient _client;
@@ -22,6 +22,8 @@ namespace SimMach.Playground.Backend {
 
             _db = new Db();
             _proj = new Projection(_db);
+            
+            
         }
 
         public Task Run() {
@@ -53,11 +55,6 @@ namespace SimMach.Playground.Backend {
                     }    
                     _position += events.Count;
                 }
-
-                
-
-                
-
                 await _env.Delay(100.Ms());
             }
         }
@@ -118,6 +115,10 @@ namespace SimMach.Playground.Backend {
             var evt = new ItemAdded(addItemRequest.ItemID, addItemRequest.Amount, total);
             await Commit(evt);
             await conn.Write(new AddItemResponse(addItemRequest.ItemID, addItemRequest.Amount, total));
+        }
+
+        public Task Dispose() {
+            return Task.CompletedTask;
         }
     }
 }

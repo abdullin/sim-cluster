@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.Threading;
 using System.Threading.Tasks;
 using SimMach.Sim;
@@ -6,7 +7,7 @@ using SimMach.Sim;
 namespace SimMach.Sim {
     class SimService {
         public readonly ServiceId Id;
-        readonly Func<IEnv, Task> _launcher;
+        readonly Func<IEnv, IEngine> _launcher;
         
         Task _task;
         SimProc _proc;
@@ -16,7 +17,7 @@ namespace SimMach.Sim {
         readonly TaskFactory _factory;
         readonly SimMachine _machine;
 
-        public SimService(SimMachine machine, ServiceId id, Func<IEnv, Task> launcher) {
+        public SimService(SimMachine machine, ServiceId id, Func<IEnv, IEngine> launcher) {
             Id = id;
             _launcher = launcher;
             _machine = machine;
@@ -25,7 +26,7 @@ namespace SimMach.Sim {
             _factory = new TaskFactory(_scheduler);
         }
 
-        public void Launch(Action<Task> done) {
+        public void Launch(Action<Exception> done) {
             if (_task != null && !_task.IsCompleted) {
                 throw new InvalidOperationException($"Can't launch {Id} while previous instance is {_task.Status}");
             }
@@ -33,7 +34,26 @@ namespace SimMach.Sim {
             var procID = _machine.NextProcID();
             var env = new SimProc(Id, _machine, procID, _factory);
             
-            _task = _factory.StartNew(() => _launcher(env).ContinueWith(done)).Unwrap();
+            _task = _factory.StartNew(async () => {
+                try {
+                    var engine = _launcher(env);
+                    try {
+                        await engine.Run();
+                    } finally {
+                        await engine.Dispose();
+                    }
+                } catch (AggregateException ex) {
+                    done(ex.InnerException);
+                    return;
+                }
+                catch (Exception ex) {
+                    done(ex);
+                    return;
+                }
+
+                done(null);
+
+            }).Unwrap();
             _proc = env;
 
         }

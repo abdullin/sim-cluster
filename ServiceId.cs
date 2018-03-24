@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 namespace SimMach {
     public class MachineDef {
 
-        public readonly Dictionary<ServiceId, Func<IEnv, Task>> Dictionary =
-            new Dictionary<ServiceId, Func<IEnv, Task>>(ServiceId.Comparer);
+        public readonly Dictionary<ServiceId, Func<IEnv, IEngine>> Dictionary =
+            new Dictionary<ServiceId, Func<IEnv, IEngine>>(ServiceId.Comparer);
 
 
-        public void Add(string svc, Func<IEnv, Task> run) {
+        public void Add(string svc, Func<IEnv, IEngine> run) {
             if (!svc.Contains(':')) {
                 svc = svc + ":" + svc;
             }
@@ -19,13 +19,28 @@ namespace SimMach {
         }
         
         
-        public void Add(string[] svc, Func<IEnv, Task> run) {
-            foreach (var s in svc) {
-                Add(s, run);
+        public void Add(string svc, Func<IEnv, Task> run) {
+            Add(svc, env => new LambdaEngine(run(env)));
+        }
+
+        
+
+        sealed class LambdaEngine : IEngine {
+            readonly Task _func;
+
+
+            public LambdaEngine(Task func) {
+                _func = func;
+            }
+
+            public Task Run() {
+               return _func;
+            }
+
+            public Task Dispose() {
+                return Task.CompletedTask;
             }
         }
-        
-        
 
 
 

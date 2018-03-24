@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 
 namespace SimMach.Playground.CommitLog {
-    public sealed class CommitLogServer {
+    public sealed class CommitLogServer : IEngine {
 
         readonly IEnv _env;
         readonly ushort _port;
@@ -25,8 +25,12 @@ namespace SimMach.Playground.CommitLog {
                 }
             }    
         }
-        
-        
+
+        public Task Dispose() {
+            return Task.CompletedTask;
+        }
+
+
         TimeSpan _scheduled = TimeSpan.MinValue;
 
         async Task HandleAsync(IConn conn) {

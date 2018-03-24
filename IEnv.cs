@@ -17,6 +17,8 @@ namespace SimMach {
 
         void Halt(string message);
 
+        //string GetLocalFolder(string name);
+
     }
 
     public static class ExtendIEnv {

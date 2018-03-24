@@ -89,5 +89,7 @@ namespace SimMach.Sim {
             
             Assert.AreEqual(TimeSpan.FromSeconds(1), terminated);
         }
+
+       
     }
 }

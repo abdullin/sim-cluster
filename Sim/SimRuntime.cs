@@ -203,9 +203,9 @@ namespace SimMach.Sim {
 
         void ISimPlan.StartServices(Predicate<ServiceId> selector = null) {
             foreach (var svc in Filter(selector)) {
-                svc.Launch(task => {
-                    if (task.Exception != null) {
-                        _halt = task.Exception.InnerException;
+                svc.Launch(ex => {
+                    if (ex != null) {
+                        _halt = ex;
                     }
                 });
             }

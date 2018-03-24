@@ -22,7 +22,7 @@ namespace SimMach.Sim {
             Network = network;
         }
 
-        public void Install(ServiceId id, Func<IEnv, Task> service) {
+        public void Install(ServiceId id, Func<IEnv, IEngine> service) {
             Services.Add(id.Service, new SimService(this, id, service));
         }
 
