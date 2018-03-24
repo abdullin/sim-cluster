@@ -59,8 +59,5 @@ namespace SimMach.Playground.Backend {
             }
             throw new IOException("No gateways active");
         }
-
-
-        
     }
 }

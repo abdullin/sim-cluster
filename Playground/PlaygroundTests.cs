@@ -9,38 +9,27 @@ namespace SimMach.Playground {
 
         [Test]
         public void Playground() {
-            var sim = new TestRuntime() {
-                //DebugNetwork = true,
-                MaxTime = 50.Sec()
-            };
-            
+            var sim = new TestRuntime() {MaxTime = 50.Sec()};
+            // network connectivity
             sim.Net.Link("client", "api1", "api2");
             sim.Net.Link("mv", "api1", "api2");
+            // install MV and backend
+            InstallCommitLog(sim, "mv");
+            InstallBackend(sim, "api1", "api2");
             
-            sim.Net.TraceRoute("client", "api1");
-            
-            sim.Svc.Add("mv", env => new CommitLogServer(env, 443).Run());
-
-            sim.Svc.Add(new[] {"api1", "api2"}, env => {
-                var client = new CommitLogClient(env, "mv:443");
-                return new BackendServer(env, 443, client).Run();
-            });
-
-            decimal finalCount = 0M;
-            
+            var finalCount = 0M;
+            // run a bot that moves items between locations
             sim.Svc.Add("client", async env => {
                 var lib = new BackendClient(env, "api1:443", "api2:443");
                 const int ringSize = 5;
                 await lib.AddItem(0, 1);
+                
                 for (int i = 0; i < 5; i++) {
                     var curr = i % ringSize;
                     var next = (i + 1) % ringSize;
                     await lib.MoveItem(curr, next, 1);
                     await env.Delay(5.Sec());
                 }
-
-                
-
                 finalCount = await lib.Count();
             });
             
@@ -53,8 +42,18 @@ namespace SimMach.Playground {
                 plan.Debug("START api1");
                 plan.StartServices(s => s.Machine == "api1");
             });
-            
             Assert.AreEqual(1M, finalCount, nameof(finalCount));
+        }
+
+        static void InstallBackend(TestRuntime sim, params string[] servers) {
+            sim.Svc.Add(servers, env => {
+                var client = new CommitLogClient(env, "mv:443");
+                return new BackendServer(env, 443, client).Run();
+            });
+        }
+
+        static void InstallCommitLog(TestRuntime sim, string service) {
+            sim.Svc.Add(service, env => new CommitLogServer(env, 443).Run());
         }
     }
 }
