@@ -20,7 +20,7 @@ namespace SimMach.Playground.CommitLog {
             }
         }
 
-        public async Task<IList<object>> Read(int from, int count) {
+        public async Task<IList<object>> Read(long from, int count) {
             using (var conn = await _env.Connect(_endpoint)) {
                 await conn.Write(new DownloadRequest(from, count));
                 var result = await conn.Read(5.Sec());

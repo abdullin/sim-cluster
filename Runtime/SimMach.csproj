@@ -12,6 +12,9 @@
     <PackageReference Include="NUnit3TestAdapter" Version="3.10.0" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Real" />
+    <ProjectReference Include="..\Fdb\Fdb.csproj">
+      <Project>{5AA0F510-BE74-400C-A63C-7F2305FD9C09}</Project>
+      <Name>Fdb</Name>
+    </ProjectReference>
   </ItemGroup>
 </Project>

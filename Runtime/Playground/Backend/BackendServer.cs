@@ -56,14 +56,15 @@ namespace SimMach.Playground.Backend {
             }
         }
 
-        int _position;
+        
 
         async Task ProjectionThread() {
             // TODO: deduplication
             while (!_env.Token.IsCancellationRequested) {
 
                 try {
-                    var events = await _client.Read(_position, int.MaxValue);
+                    var position = _db.GetCounter();
+                    var events = await _client.Read(position, int.MaxValue);
 
                     if (events.Count > 0) {
                         _env.Debug($"Projecting {events.Count} events");
@@ -71,7 +72,8 @@ namespace SimMach.Playground.Backend {
                             _proj.Dispatch(e);
                         }
 
-                        _position += events.Count;
+                        position += events.Count;
+                        _db.SetCounter(position);
                     }
 
                     await _env.Delay(100.Ms());

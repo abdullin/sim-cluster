@@ -37,11 +37,11 @@ namespace SimMach.Playground {
                 plan.StartServices();
                 await plan.Delay(6.Sec());
                 plan.Debug("REIMAGE api1");
-                await plan.StopServices(s => s.Machine == "api1", grace:1.Sec());
+               // await plan.StopServices(s => s.Machine == "api1", grace:1.Sec());
                 plan.WipeStorage("api1");
                 await plan.Delay(2.Sec());
                 plan.Debug("START api1");
-                plan.StartServices(s => s.Machine == "api1");
+                //plan.StartServices(s => s.Machine == "api1");
             });
             Assert.AreEqual(1M, finalCount, nameof(finalCount));
         }

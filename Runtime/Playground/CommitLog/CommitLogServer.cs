@@ -40,7 +40,7 @@ namespace SimMach.Playground.CommitLog {
 
                     switch (req) {
                         case DownloadRequest dr:
-                            await conn.Write(_stored.Skip(dr.From).Take(dr.Count).ToList());
+                            await conn.Write(_stored.Skip((int)dr.From).Take(dr.Count).ToList());
                             return;
                         case CommitRequest cr:
                             await _env.SimulateWork(5.Ms());

@@ -10,9 +10,9 @@ namespace SimMach.Playground.CommitLog {
     }
     
     public sealed class DownloadRequest {
-        public readonly int From;
+        public readonly long From;
         public readonly int Count;
-        public DownloadRequest(int f, int count) {
+        public DownloadRequest(long f, int count) {
             From = f;
             Count = count;
         }
