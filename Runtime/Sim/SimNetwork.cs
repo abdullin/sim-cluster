@@ -8,76 +8,6 @@ namespace SimMach.Sim {
 
   
     
-    sealed class SimNetwork {
-        readonly SimRuntime _runtime;
-
-        public SimNetwork(ClusterDef cluster, SimRuntime runtime) {
-            _runtime = runtime;
-
-            // we register each link as a network service
-            foreach (var (id, def) in cluster.Routes) {
-                var service = new ServiceId($"network:{id.Source}->{id.Destinaton}");
-                var scheduler = new SimScheduler(_runtime, service);
-                _routes.Add(id, new SimRoute(scheduler, this, id, def));
-            }
-        }
-
-        public bool DebugPackets;
-        
-
-        public void Debug(string message) {
-            if (DebugPackets)
-            _runtime.Debug(message);
-        }
-
-        readonly Dictionary<RouteId, SimRoute> _routes = new Dictionary<RouteId, SimRoute>(RouteId.Comparer);
-        
-
-        public void SendPacket(SimPacket packet) {
-            var source = packet.Source.Machine;
-            var destination = packet.Destination.Machine;
-            var routeId = new RouteId(GetNetwork(source), GetNetwork(destination));
-            _routes[routeId].Send(packet);
-        }
-
-
-        public void InternalDeliver(SimPacket msg) {
-            if (_runtime.ResolveHost(msg.Destination.Machine, out var machine)) {
-                if (machine.TryDeliver(msg)) {
-                    return; 
-                }
-                
-
-            }
-            
-            var back = new SimPacket(msg.Destination, msg.Source, 
-                new IOException("Connection refused"),
-                0,
-                SimFlag.Reset
-            );
-                
-                
-            SendPacket(back);
-        }
-
-
-        static string GetNetwork(string machine) {
-            if (machine.IndexOf('.') < 0) {
-                return machine;
-            }
-
-            return string.Join('.', machine.Split('.').Skip(1));
-
-        }
-
-        public bool TryGetRoute(string from, string to, out SimRoute r) {
-            
-            
-            var linkId = new RouteId(GetNetwork(from), GetNetwork(to));
-            return _routes.TryGetValue(linkId, out r);
-        }
-
-    }
 
     [Flags]
     public enum SimFlag : byte {
@@ -274,7 +204,7 @@ namespace SimMach.Sim {
     }
 
     sealed class SimRoute {
-        readonly SimNetwork _network;
+        readonly SimCluster _network;
         readonly RouteId _route;
         SimScheduler _scheduler;
         readonly TaskFactory _factory;
@@ -285,7 +215,7 @@ namespace SimMach.Sim {
             _network.Debug($"  {_route.Full,-34} {l}");
         }
 
-        public SimRoute(SimScheduler scheduler, SimNetwork network, RouteId route, RouteDef def) {
+        public SimRoute(SimScheduler scheduler, SimCluster network, RouteId route, RouteDef def) {
             _scheduler = scheduler;
             _network = network;
             _route = route;

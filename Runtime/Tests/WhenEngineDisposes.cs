@@ -7,18 +7,18 @@ namespace SimMach.Sim {
     public sealed class WhenEngineDisposes {
         [Test]
         public void DisposeIsFiredOnNormalTermination() {
-            var runtime = new TestRuntime();
+            var test = new TestDef();
 
             bool run = false;
             bool disposed = false;
             
             
-            runtime.Def.Add("run", e => new TestEngine(
+            test.AddService("run", e => new TestEngine(
                 async () => { run = true; },
                 async () => { disposed = true;}
             ));
             
-            runtime.RunAll();
+            test.RunAll();
             Assert.IsTrue(disposed, nameof(disposed));
             Assert.IsTrue(run, nameof(run));
         }
@@ -26,13 +26,13 @@ namespace SimMach.Sim {
         
         [Test]
         public void DisposeIsFiredOnAbnormalTermination() {
-            var runtime = new TestRuntime();
+            var runtime = new TestDef();
 
             bool run = false;
             bool disposed = false;
             
             
-            runtime.Def.Add("run", e => new TestEngine(
+            runtime.AddService("run", e => new TestEngine(
                 async () => {
                     run = true;
                     throw new InvalidOperationException();
@@ -47,12 +47,12 @@ namespace SimMach.Sim {
         
         [Test]
         public void DisposeIsNotFiredOnKill() {
-            var runtime = new TestRuntime();
+            var runtime = new TestDef();
 
             bool run = false;
             bool disposed = false;
             
-            runtime.Def.Add("run", e => new TestEngine(
+            runtime.AddService("run", e => new TestEngine(
                 async () => {
                     run = true;
                     await e.Delay(10.Minutes());
@@ -71,13 +71,13 @@ namespace SimMach.Sim {
         
         [Test]
         public void SlowDisposeIsKilled() {
-            var runtime = new TestRuntime();
+            var test = new TestDef();
 
             
             bool disposeStart = false;
             bool disposeComplete = false;
             
-            runtime.Def.Add("run", e => new TestEngine(
+            test.AddService("run", e => new TestEngine(
                 async () => {
                     try {
                         await e.SimulateWork(Timeout.InfiniteTimeSpan, e.Token);
@@ -95,7 +95,7 @@ namespace SimMach.Sim {
                 }
             ));
             
-            runtime.RunPlan(async e => {
+            test.RunPlan(async e => {
                 e.StartServices();
                 await e.Delay(5.Sec());
                 e.Debug("Start shutting down");

@@ -10,17 +10,17 @@ namespace SimMach {
             new Dictionary<ServiceId, Func<IEnv, IEngine>>(ServiceId.Comparer);
 
 
-        public void Add(string svc, Func<IEnv, IEngine> run) {
+        public void AddService(string svc, Func<IEnv, IEngine> run) {
             if (!svc.Contains(':')) {
-                svc = svc + ":" + svc;
+                var count = Services.Count(p => p.Key.Machine == svc);
+                
+                svc = svc + ":svc" + count;
             }
             Services.Add(new ServiceId(svc), run);
         }
         
         
-        public void Add(string svc, Func<IEnv, Task> run) {
-            Add(svc, env => new LambdaEngine(run(env)));
-        }
+      
         
         public readonly Dictionary<RouteId, RouteDef> Routes = new Dictionary<RouteId, RouteDef>(RouteId.Comparer);
         
@@ -30,29 +30,15 @@ namespace SimMach {
 
         
         
-        public void Link(string from, string to) {
-            var cfg = new RouteDef();
-            Routes.Add(new RouteId(from, to), cfg);
-            Routes.Add(new RouteId(to, from), cfg);
+        public void LinkNets(string from, string to, TimeSpan?latency= null) {
+            var def = new RouteDef {
+                Latency = latency ?? 50.Ms()
+            };
+            Routes.Add(new RouteId(from, to), def);
+            Routes.Add(new RouteId(to, from), def);
         }
 
         
-
-        sealed class LambdaEngine : IEngine {
-            readonly Task _func;
-
-
-            public LambdaEngine(Task func) {
-                _func = func;
-            }
-
-            public Task Run() {
-                return _func;
-            }
-
-            public Task Dispose() {
-                return Task.CompletedTask;
-            }
-        }
+       
     }
 }

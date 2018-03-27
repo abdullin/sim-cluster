@@ -9,18 +9,17 @@ namespace SimMach.Playground {
 
         [Test]
         public void Playground() {
-            var sim = new TestRuntime() {MaxTime = 50.Sec()};
-            // network connectivity
-            sim.Def.Link("www", "public");
-            sim.Def.Link("public", "internal");
+            var test = new TestDef() {MaxTime = 50.Sec()};
             
-            // install MV and backend
-            InstallCommitLog(sim, "cl.internal");
-            InstallBackend(sim, "api1.public", "api2.public");
+            test.LinkNets("bot", "public", latency:100.Ms());
+            test.LinkNets("public", "internal", latency:15.Ms());
+            
+            InstallCommitLog(test, "cl.internal");
+            InstallBackend(test, "api1.public", "api2.public");
             
             var finalCount = 0M;
             // run a bot that moves items between locations
-            sim.Def.Add("client.www", async env => {
+            test.AddScript("bot", async env => {
                 var lib = new BackendClient(env, "api1.public:443", "api2.public:443");
                 const int ringSize = 5;
                 await lib.AddItem(0, 1);
@@ -35,30 +34,30 @@ namespace SimMach.Playground {
                 env.Halt("DONE");
             });
             
-            sim.RunPlan(async plan => {
+            test.RunPlan(async plan => {
                 plan.StartServices();
                 await plan.Delay(6.Sec());
                 plan.Debug("REIMAGE api1");
-               // await plan.StopServices(s => s.Machine == "api1", grace:1.Sec());
+                await plan.StopServices(s => s.Machine == "api1.public", grace:1.Sec());
                 plan.WipeStorage("api1");
                 await plan.Delay(2.Sec());
                 plan.Debug("START api1");
-                //plan.StartServices(s => s.Machine == "api1");
+                plan.StartServices(s => s.Machine == "api1.public");
             });
             Assert.AreEqual(1M, finalCount, nameof(finalCount));
         }
 
-        static void InstallBackend(TestRuntime sim, params string[] servers) {
+        static void InstallBackend(ClusterDef sim, params string[] servers) {
             foreach (var server in servers) {
-                sim.Def.Add(server, env => {
+                sim.AddService(server, env => {
                     var client = new CommitLogClient(env, "cl.internal:443");
                     return new BackendServer(env, 443, client);
                 });    
             }
         }
 
-        static void InstallCommitLog(TestRuntime sim, string service) {
-            sim.Def.Add(service, env => new CommitLogServer(env, 443));
+        static void InstallCommitLog(TestDef sim, string service) {
+            sim.AddService(service, env => new CommitLogServer(env, 443));
         }
     }
     

@@ -9,7 +9,7 @@ namespace SimMach.Sim {
     public sealed class SimPromiseTests {
         [Test]
         public void CompletionSourceTimesOut() {
-            var test = new TestRuntime() {
+            var test = new TestDef() {
                 MaxSteps = 100,
             };
 
@@ -30,7 +30,7 @@ namespace SimMach.Sim {
         
         [Test]
         public void SettingResultSyncCompletesPromise() {
-            var test = new TestRuntime() {
+            var test = new TestDef() {
                 MaxSteps = 100,
             };
 
@@ -50,7 +50,7 @@ namespace SimMach.Sim {
         }
         [Test]
         public void SettingErrorSyncCompletesPromise() {
-            var test = new TestRuntime();
+            var test = new TestDef();
 
             var failed = TimeSpan.MinValue;
             var result = false;
@@ -72,12 +72,12 @@ namespace SimMach.Sim {
         
         [Test]
         public void CancellationAbortsPromise() {
-            var test = new TestRuntime();
+            var test = new TestDef();
 
             var cancel = TimeSpan.MinValue;
             var result = false;
             
-            test.Def.Add("m:m", async env => {
+            test.AddScript("m:m", async env => {
                 var promise = new SimFuture<bool>(5000, env.Token);
                 try {
                     result = await promise.Task;
@@ -88,13 +88,13 @@ namespace SimMach.Sim {
             
             test.RunPlan(async plan => {
                 plan.StartServices();
-                await plan.Delay(1000);
-                await plan.StopServices();
+                await plan.Delay(1000.Sec());
+                await plan.StopServices(grace:1.Sec());
             });
             
             
             Assert.IsFalse(result);
-            Assert.AreEqual(TimeSpan.FromMilliseconds(1000), cancel);
+            Assert.AreEqual(TimeSpan.FromMilliseconds(1000), cancel, nameof(cancel));
         }
 
     }

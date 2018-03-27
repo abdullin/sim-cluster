@@ -7,7 +7,7 @@ namespace SimMach.Sim {
     sealed class SimSocket : ISocket {
         readonly SimProc _proc;
         public readonly SimEndpoint Endpoint;
-        readonly SimNetwork _net;
+        readonly SimCluster _net;
         
 
 
@@ -18,7 +18,7 @@ namespace SimMach.Sim {
 
         SimFuture<IConn> _poll;
 
-        public SimSocket(SimProc proc, SimEndpoint endpoint, SimNetwork net) {
+        public SimSocket(SimProc proc, SimEndpoint endpoint, SimCluster net) {
             _proc = proc;
             Endpoint = endpoint;
             _net = net;

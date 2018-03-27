@@ -46,14 +46,4 @@ namespace SimMach {
         void SetError(Exception ex);
         Task<T> Task { get; }
     }
-    
-    public interface ISimPlan {
-        void StartServices(Predicate<ServiceId> selector = null);
-        Task StopServices(Predicate<ServiceId> selector = null, TimeSpan? grace = null);
-        void WipeStorage(string machine);
-        void Debug(string message);
-        Task Delay(int i);
-        Task Delay(TimeSpan i);
-        TimeSpan Time { get; }
-    }
 }

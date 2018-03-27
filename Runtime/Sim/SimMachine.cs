@@ -8,7 +8,7 @@ namespace SimMach.Sim {
     class SimMachine {
         public readonly string Name;
         public readonly SimRuntime Runtime;
-        public readonly SimNetwork Network;
+        public readonly SimCluster Cluster;
 
         
         // ooh, clock drift !
@@ -17,10 +17,10 @@ namespace SimMach.Sim {
         public readonly Dictionary<string, SimService> Services = new Dictionary<string, SimService>();
         readonly Dictionary<ushort, SimSocket> _sockets = new Dictionary<ushort, SimSocket>();
 
-        public SimMachine(string name, SimRuntime runtime, SimNetwork network) {
+        public SimMachine(string name, SimRuntime runtime, SimCluster cluster) {
             Name = name;
             Runtime = runtime;
-            Network = network;
+            Cluster = cluster;
         }
 
         public void Install(ServiceId id, Func<IEnv, IEngine> service) {
@@ -53,7 +53,7 @@ namespace SimMach.Sim {
 
         public async Task<IConn> Connect(SimProc process, SimEndpoint destination) {
             SimRoute route;
-            if (!Network.TryGetRoute(Name, destination.Machine, out route)) {
+            if (!Cluster.TryGetRoute(Name, destination.Machine, out route)) {
                 throw new IOException($"Route not found");
             }
             
@@ -65,7 +65,7 @@ namespace SimMach.Sim {
             
             
 
-            var clientSocket = new SimSocket(process, source, Network);
+            var clientSocket = new SimSocket(process, source, Cluster);
             _sockets.Add(socketId, clientSocket);
 
             
@@ -97,7 +97,7 @@ namespace SimMach.Sim {
                 throw new IOException($"Address {endpoint} in use");
             }
 
-            var socket = new SimSocket(proc, endpoint, Network);
+            var socket = new SimSocket(proc, endpoint, Cluster);
             _sockets.Add(port, socket);
 
             proc.RegisterSocket(socket);

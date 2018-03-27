@@ -9,12 +9,12 @@ namespace SimMach.Sim {
         public void RebootTest() {
             var bootCount = 0;
 
-            var test = new TestRuntime() {
+            var test = new TestDef() {
                 MaxTime = 2.Minutes(),
                 MaxInactive = 2.Minutes()
             };
 
-            test.Def.Add("com:test", async env => {
+            test.AddScript("com:test", async env => {
                 bootCount++;
                 while (!env.Token.IsCancellationRequested) {
                     await env.SimulateWork(100.Ms());
@@ -33,14 +33,14 @@ namespace SimMach.Sim {
 
         [Test]
         public void NonResponsiveServiceIsKilledWithoutMercy() {
-            var test = new TestRuntime {
+            var test = new TestDef {
                 MaxTime = TimeSpan.FromMinutes(1)
             };
 
             var launched = true;
             var terminated = false;
 
-            test.Def.Add("com:test", async env => {
+            test.AddScript("com:test", async env => {
                 launched = true;
                 try {
                     while (!env.Token.IsCancellationRequested) {
@@ -54,7 +54,7 @@ namespace SimMach.Sim {
             
             test.RunPlan(async plan => {
                 plan.StartServices();
-                await plan.Delay(1000);
+                await plan.Delay(1.Sec());
                 await plan.StopServices(grace:1.Sec());
             });
             
@@ -64,14 +64,14 @@ namespace SimMach.Sim {
         
         [Test]
         public void StopResponsiveService() {
-            var test = new TestRuntime {
+            var test = new TestDef {
                 MaxTime = TimeSpan.FromMinutes(1)
             };
 
             
             var terminated = TimeSpan.Zero;
 
-            test.Def.Add("com:test", async env => {
+            test.AddScript("com:test", async env => {
                 try {
                     while (!env.Token.IsCancellationRequested) {
                         await env.SimulateWork(10.Sec(), env.Token);

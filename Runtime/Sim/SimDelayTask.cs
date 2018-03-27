@@ -24,10 +24,6 @@ namespace SimMach.Sim {
             return task;
         }
 
-        public new static Task Delay(int ms, CancellationToken token = default(CancellationToken)) {
-            return Delay(TimeSpan.FromMilliseconds(ms), token);
-        }
-
         public bool FutureIsNow => _token.IsCancellationRequested;
         public TimeSpan Deadline { get; }
     }

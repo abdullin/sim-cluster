@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using FoundationDB.Client;
 using FoundationDB.Layers.Tuples;
 using LightningDB;
+using LightningDB.Native;
 
 namespace SimMach.Playground.Backend {
 
@@ -50,7 +51,7 @@ namespace SimMach.Playground.Backend {
             var key = FdbTuple.Create((byte) Tables.Quantity, id);
             using (var tx = _le.BeginTransaction()) {
                 if (amount == 0) {
-                    tx.Delete(_ld, key.GetBytes());
+                    tx.TryDelete(_ld, key.GetBytes());
                 } else {
                     tx.Put(_ld, key.GetBytes(), GetBytes(amount));
                 }
@@ -165,5 +166,18 @@ namespace SimMach.Playground.Backend {
     public sealed class Db {
         LightningEnvironment _le;
         LightningDatabase _ld;
+    }
+
+    public static class ExtendLightningTransaction {
+        public static void TryDelete(this LightningTransaction tx, LightningDatabase db, byte[] key) {
+            try {
+                tx.Delete(db,key);
+                
+            } catch (LightningException ex) {
+                if (ex.StatusCode != Lmdb.MDB_NOTFOUND) {
+                    throw;
+                }
+            }
+        }
     }
 }
