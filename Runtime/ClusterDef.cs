@@ -22,18 +22,18 @@ namespace SimMach {
             Add(svc, env => new LambdaEngine(run(env)));
         }
         
-        readonly Dictionary<RouteId, RouteCfg> _routes = new Dictionary<RouteId, RouteCfg>(RouteId.Comparer);
+        public readonly Dictionary<RouteId, RouteDef> Routes = new Dictionary<RouteId, RouteDef>(RouteId.Comparer);
         
         
 
-        public ICollection<RouteId> Links => _routes.Keys;
+
 
         
         
         public void Link(string from, string to) {
-            var cfg = new RouteCfg();
-            _routes.Add(new RouteId(from, to), cfg);
-            _routes.Add(new RouteId(to, from), cfg);
+            var cfg = new RouteDef();
+            Routes.Add(new RouteId(from, to), cfg);
+            Routes.Add(new RouteId(to, from), cfg);
         }
 
         

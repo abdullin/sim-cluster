@@ -11,15 +11,14 @@ namespace SimMach.Sim {
     sealed class SimNetwork {
         readonly SimRuntime _runtime;
 
-        public SimNetwork(ClusterDef def, SimRuntime runtime) {
+        public SimNetwork(ClusterDef cluster, SimRuntime runtime) {
             _runtime = runtime;
 
             // we register each link as a network service
-            foreach (var link in def.Links) {
-                var service = new ServiceId($"network:{link.Client}->{link.Server}");
+            foreach (var (id, def) in cluster.Routes) {
+                var service = new ServiceId($"network:{id.Source}->{id.Destinaton}");
                 var scheduler = new SimScheduler(_runtime, service);
-                var debug = true;//def.DebugRoutes.Contains(link);
-                _routes.Add(link, new SimRoute(scheduler, this, link, debug));
+                _routes.Add(id, new SimRoute(scheduler, this, id, def));
             }
         }
 
@@ -279,19 +278,19 @@ namespace SimMach.Sim {
         readonly RouteId _route;
         SimScheduler _scheduler;
         readonly TaskFactory _factory;
-        readonly bool _debug;
+        readonly RouteDef _def;
 
        void Debug(string l) {
-           if (_debug)
+           if (_def.Debug)
             _network.Debug($"  {_route.Full,-34} {l}");
         }
 
-        public SimRoute(SimScheduler scheduler, SimNetwork network, RouteId route, bool debug) {
+        public SimRoute(SimScheduler scheduler, SimNetwork network, RouteId route, RouteDef def) {
             _scheduler = scheduler;
             _network = network;
             _route = route;
             _factory = new TaskFactory(_scheduler);
-            _debug = debug;
+            _def = def;
         }
 
         public Task Send(SimPacket msg) {
@@ -300,7 +299,7 @@ namespace SimMach.Sim {
             _factory.StartNew(async () => {
                 // delivery wait
                 try {
-                    await SimDelayTask.Delay(50);
+                    await SimDelayTask.Delay(_def.Latency);
                     _network.InternalDeliver(msg);
                 } catch (Exception ex) {
                     Debug($"FATAL: {ex}");

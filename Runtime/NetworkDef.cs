@@ -5,14 +5,14 @@ namespace SimMach {
     
     
     public class RouteId {
-        public readonly string Client;
-        public readonly string Server;
-        public RouteId(string client, string server) {
-            Client = client;
-            Server = server;
+        public readonly string Source;
+        public readonly string Destinaton;
+        public RouteId(string source, string destinaton) {
+            Source = source;
+            Destinaton = destinaton;
         }
 
-        public string Full => $"{Client}->{Server}";
+        public string Full => $"{Source}->{Destinaton}";
 
         public override string ToString() {
             return Full;
@@ -21,7 +21,8 @@ namespace SimMach {
         public static readonly IEqualityComparer<RouteId> Comparer = new DelegateComparer<RouteId>(id => id.Full);
     }
 
-    public class RouteCfg {
-        public int LatencyMs = 50;
+    public class RouteDef {
+        public TimeSpan Latency = 50.Ms();
+        public bool Debug;
     }
 }
