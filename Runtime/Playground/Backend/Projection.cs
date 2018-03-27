@@ -2,19 +2,19 @@
 
 namespace SimMach.Playground.Backend {
     public sealed class Projection {
-        readonly Db _db;
+        readonly Store _store;
 
-        public Projection(Db db) {
-            _db = db;
+        public Projection(Store store) {
+            _store = store;
         }
 
         public void Dispatch(object e) {
             switch (e) {
                 case ItemAdded x:
-                    _db.SetItemQuantity(x.ItemID, x.Total);
+                    _store.SetItemQuantity(x.ItemID, x.Total);
                     return;
                 case ItemRemoved x:
-                    _db.SetItemQuantity(x.ItemID, x.Total);
+                    _store.SetItemQuantity(x.ItemID, x.Total);
                     return;
                 default:
                     throw new InvalidOperationException($"Unknown event {e}");

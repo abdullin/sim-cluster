@@ -7,14 +7,14 @@ using LightningDB;
 namespace SimMach.Playground.Backend {
 
 
-    public sealed class Db {
+    public sealed class Store {
         
         public enum Tables : byte { SysCounter, Quantity }
         
         readonly LightningEnvironment _le;
         readonly LightningDatabase _ld;
 
-        public Db(LightningEnvironment le, LightningDatabase ld) {
+        public Store(LightningEnvironment le, LightningDatabase ld) {
             _le = le;
             _ld = ld;
         }
@@ -160,5 +160,10 @@ namespace SimMach.Playground.Backend {
 
             return bytes;
         }
+    }
+
+    public sealed class Db {
+        LightningEnvironment _le;
+        LightningDatabase _ld;
     }
 }

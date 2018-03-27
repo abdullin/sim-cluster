@@ -225,6 +225,12 @@ namespace SimMach.Sim {
             Console.WriteLine($"Simulated {Moment.Print(softTime)} in {_steps} steps.");
             Console.WriteLine($"Took {Moment.Print(watch.Elapsed)} of real time (x{factor:F0} speed-up)");
 
+            foreach (var (_, machine) in _machines) {
+                foreach (var (_, svc) in machine.Services) {
+                    svc.ReleaseResources();
+                }
+            }
+
         }
 
         void ISimPlan.StartServices(Predicate<ServiceId> selector = null) {

@@ -2,6 +2,7 @@
 using System.Reflection.Emit;
 using System.Threading;
 using System.Threading.Tasks;
+using LightningDB;
 using SimMach.Sim;
 
 namespace SimMach {
@@ -17,8 +18,7 @@ namespace SimMach {
 
         void Halt(string message, Exception error = null);
 
-        string GetLocalFolder(string name);
-
+        LightningEnvironment GetDatabase(string name);
     }
 
     public static class ExtendIEnv {

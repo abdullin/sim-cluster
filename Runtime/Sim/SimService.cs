@@ -69,14 +69,20 @@ namespace SimMach.Sim {
             if (finished != _task) {
                 _proc.Debug("Shutdown timeout. ERASING FUTURE to KILL");
                 _machine.Runtime.FutureQueue.Erase(_scheduler);
-                _proc.Kill();
             }
-            _proc = null;
-            _task = null;
+            
+            ReleaseResources();
         }
 
 
-     
-        
+        public void ReleaseResources() {
+            if (_proc != null) {
+                _proc.Dispose();
+                _proc = null;
+            }
+
+            _task = null;
+
+        }
     }
 }

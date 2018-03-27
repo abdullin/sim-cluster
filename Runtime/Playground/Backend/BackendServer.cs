@@ -12,7 +12,7 @@ namespace SimMach.Playground.Backend {
         readonly CommitLogClient _client;
         
         
-        readonly Db _db;
+        readonly Store _store;
         readonly Projection _proj;
 
         readonly LightningEnvironment _le;
@@ -24,9 +24,7 @@ namespace SimMach.Playground.Backend {
             _client = client;
             _port = port;
 
-            var folder = env.GetLocalFolder("db");
-
-            _le = new LightningEnvironment(folder, new EnvironmentConfiguration() { });
+            _le = env.GetDatabase("db");
             _le.Open(EnvironmentOpenFlags.MapAsync);
 
             using (var tx = _le.BeginTransaction()) {
@@ -34,8 +32,8 @@ namespace SimMach.Playground.Backend {
                 tx.Commit();
             }
             
-            _db = new Db(_le, _ld);
-            _proj = new Projection(_db);
+            _store = new Store(_le, _ld);
+            _proj = new Projection(_store);
         }
 
         public Task Run() {
@@ -63,7 +61,7 @@ namespace SimMach.Playground.Backend {
             while (!_env.Token.IsCancellationRequested) {
 
                 try {
-                    var position = _db.GetCounter();
+                    var position = _store.GetCounter();
                     var events = await _client.Read(position, int.MaxValue);
 
                     if (events.Count > 0) {
@@ -73,7 +71,7 @@ namespace SimMach.Playground.Backend {
                         }
 
                         position += events.Count;
-                        _db.SetCounter(position);
+                        _store.SetCounter(position);
                     }
 
                     await _env.Delay(100.Ms());
@@ -109,7 +107,7 @@ namespace SimMach.Playground.Backend {
                             await MoveItem(conn, r);
                             break;
                         case CountRequest r:
-                            var amount = _db.Count();
+                            var amount = _store.Count();
                             await conn.Write(new CountResponse(amount));
                             break;
                     }
@@ -120,8 +118,8 @@ namespace SimMach.Playground.Backend {
         }
 
         async Task MoveItem(IConn conn, MoveItemRequest moveItemRequest) {
-            var wasFrom = _db.GetItemQuantity(moveItemRequest.FromItemID);
-            var wasTo = _db.GetItemQuantity(moveItemRequest.ToItemID);
+            var wasFrom = _store.GetItemQuantity(moveItemRequest.FromItemID);
+            var wasTo = _store.GetItemQuantity(moveItemRequest.ToItemID);
             if (wasFrom < moveItemRequest.Amount) {
                 await conn.Write(new ArgumentException("Insufficient"));
                 return;
@@ -134,7 +132,7 @@ namespace SimMach.Playground.Backend {
         }
 
         async Task AddItem(IConn conn, AddItemRequest addItemRequest) {
-            var quantity = _db.GetItemQuantity(addItemRequest.ItemID);
+            var quantity = _store.GetItemQuantity(addItemRequest.ItemID);
             var total = quantity + addItemRequest.Amount;
             var evt = new ItemAdded(addItemRequest.ItemID, addItemRequest.Amount, total);
             await Commit(evt);

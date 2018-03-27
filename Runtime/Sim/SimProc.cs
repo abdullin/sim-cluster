@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using LightningDB;
 
 namespace SimMach.Sim {
 
@@ -10,6 +12,8 @@ namespace SimMach.Sim {
         readonly TaskFactory _scheduler;
         public readonly ServiceId Id;
         readonly SimMachine _machine;
+
+        readonly Stack<IDisposable> _simulationResources = new Stack<IDisposable>();
 
         readonly CancellationTokenSource _cts;
         public CancellationToken Token => _cts.Token;
@@ -46,12 +50,6 @@ namespace SimMach.Sim {
             _cts.Cancel();
         }
 
-        bool _killed;
-
-        public void Kill() {
-            _killed = true;
-        }
-
         public TimeSpan Time => _machine.Time;
 
         public async Task<IConn> Connect(SimEndpoint endpoint) {
@@ -67,9 +65,14 @@ namespace SimMach.Sim {
             _machine.Runtime.Halt(message, error);
         }
 
-        public string GetLocalFolder(string name) {
-            return _machine.GetServiceFolder(Id.Service, name);
+        public LightningEnvironment GetDatabase(string name) {
+            var folder = _machine.GetServiceFolder(Id.Service, name);
+            var db = new LightningEnvironment(folder);
+            _simulationResources.Push(db);
+            return db;
         }
+
+
 
         public void Debug(string l) {
             _machine.Debug($"  {Id.Machine,-13} {l}");
@@ -87,8 +90,13 @@ namespace SimMach.Sim {
         }
 
         public void Dispose() {
-            foreach (var (_, sock) in _sockets) {
-                ReleaseSocket(sock.Endpoint.Port);
+            foreach (var (port,_) in _sockets) {
+                _machine.ReleaseSocket(port);
+            }
+            _sockets.Clear();
+
+            while (_simulationResources.TryPop(out var disposable)) {
+                disposable.Dispose();
             }
         }
     }
