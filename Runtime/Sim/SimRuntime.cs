@@ -117,6 +117,8 @@ namespace SimMach.Sim {
             _lastActivity = _time;
         }
 
+        public SimRandom Rand = new SimRandom(0);
+
 
         public void WipeStorage(string machine) {
             _machines[machine].WipeStorage();
@@ -147,13 +149,14 @@ namespace SimMach.Sim {
             _haltMessage = message;
         }
 
-        public void Run(Stream trace = null) {
+        public void Run() {
             _haltError = null;
 
             var watch = Stopwatch.StartNew();
             var reason = "none";
             
             Debug($"{"start".ToUpper()}");
+            Rand.Reinitialize(0);
 
             try {
                 var step = 0;

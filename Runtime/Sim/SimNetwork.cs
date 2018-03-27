@@ -299,6 +299,8 @@ namespace SimMach.Sim {
             _factory.StartNew(async () => {
                 // delivery wait
                 try {
+                    
+                    
                     await SimDelayTask.Delay(_def.Latency);
                     _network.InternalDeliver(msg);
                 } catch (Exception ex) {
