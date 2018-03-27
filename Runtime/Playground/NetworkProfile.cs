@@ -1,7 +1,7 @@
 ﻿using System;
 
 namespace SimMach.Playground {
-    public static class NetworkPresets {
+    public static class NetworkProfile {
         public static void Internet(RouteDef obj) {
             obj.Latency = r => {
                 var next = r.Next(20, 100);
@@ -10,7 +10,7 @@ namespace SimMach.Playground {
             };
         }
 
-        public static void Intranet(RouteDef obj) {
+        public static void AzureIntranet(RouteDef obj) {
             obj.Latency = r => r.Next(2, 10).Ms();
         }
 

@@ -1,26 +1,32 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace SimMach.Sim {
     class SimControl  {
-        readonly SimCluster _cluster;
+        public readonly SimCluster Cluster;
         readonly SimRuntime _runtime;
+
+        public SimRandom Rand => Cluster.Rand;
+        
         public SimControl(SimCluster cluster, SimRuntime runtime) {
-            _cluster = cluster;
+            Cluster = cluster;
             _runtime = runtime;
         }
 
         public void StartServices(Predicate<ServiceId> selector = null) {
-            _cluster.StartServices(selector);
+            Cluster.StartServices(selector);
         }
 
         public Task StopServices(Predicate<ServiceId> selector = null, TimeSpan? grace = null) {
-            return _cluster.StopServices(selector, grace);
+            return Cluster.StopServices(selector, grace);
         }
+        
+        
 
         public void WipeStorage(string machine) {
-            if (_cluster.ResolveHost(machine, out var simMachine)) {
+            if (Cluster.ResolveHost(machine, out var simMachine)) {
                 simMachine.WipeStorage();
             }
         }

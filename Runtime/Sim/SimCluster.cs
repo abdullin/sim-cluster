@@ -9,8 +9,8 @@ namespace SimMach.Sim {
         
         readonly SimRuntime _runtime;
         
-        readonly Dictionary<string, SimMachine> _machines = new Dictionary<string, SimMachine>();
-        readonly Dictionary<RouteId, SimRoute> _routes = new Dictionary<RouteId, SimRoute>(RouteId.Comparer);
+        public readonly Dictionary<string, SimMachine> Machines = new Dictionary<string, SimMachine>();
+        public readonly Dictionary<RouteId, SimRoute> Routes = new Dictionary<RouteId, SimRoute>(RouteId.Comparer);
         public readonly SimRandom Rand;
         
         public SimCluster(ClusterDef cluster, SimRuntime runtime) {
@@ -21,7 +21,7 @@ namespace SimMach.Sim {
             foreach (var (id, def) in cluster.Routes) {
                 var service = new ServiceId($"network:{id.Source}->{id.Destinaton}");
                 var scheduler = new SimScheduler(_runtime, service);
-                _routes.Add(id, new SimRoute(scheduler, this, id, def));
+                Routes.Add(id, new SimRoute(scheduler, this, id, def));
             }
             
             foreach (var machine in cluster.Services.GroupBy(i => i.Key.Machine)) {
@@ -30,12 +30,12 @@ namespace SimMach.Sim {
                 foreach (var pair in machine) {
                     m.Install(pair.Key, pair.Value);
                 }
-                _machines.Add(machine.Key, m);
+                Machines.Add(machine.Key, m);
             }
         }
         
         public bool ResolveHost(string name, out SimMachine m) {
-            return _machines.TryGetValue(name, out m);
+            return Machines.TryGetValue(name, out m);
         }
 
         public void Debug(string message) {
@@ -46,7 +46,7 @@ namespace SimMach.Sim {
             var source = packet.Source.Machine;
             var destination = packet.Destination.Machine;
             var routeId = new RouteId(GetNetwork(source), GetNetwork(destination));
-            _routes[routeId].Send(packet);
+            Routes[routeId].Send(packet);
         }
 
         public void InternalDeliver(SimPacket msg) {
@@ -73,12 +73,12 @@ namespace SimMach.Sim {
             return string.Join('.', machine.Split('.').Skip(1));
         }
         
-        IEnumerable<SimService> Filter(Predicate<ServiceId> filter) {
+        public IEnumerable<SimService> Filter(Predicate<ServiceId> filter) {
             if (null == filter) {
-                return _machines.SelectMany(p => p.Value.Services.Values);
+                return Machines.SelectMany(p => p.Value.Services.Values);
             }
 
-            return _machines.SelectMany(p => p.Value.Services.Values).Where(p => filter(p.Id));
+            return Machines.SelectMany(p => p.Value.Services.Values).Where(p => filter(p.Id));
         }
         
         public void StartServices(Predicate<ServiceId> selector = null) {
@@ -107,11 +107,11 @@ namespace SimMach.Sim {
         
         public bool TryGetRoute(string from, string to, out SimRoute r) {
             var linkId = new RouteId(GetNetwork(from), GetNetwork(to));
-            return _routes.TryGetValue(linkId, out r);
+            return Routes.TryGetValue(linkId, out r);
         }
 
         public void Dispose() {
-            foreach (var (_, machine) in _machines) {
+            foreach (var (_, machine) in Machines) {
                 foreach (var (_, svc) in machine.Services) {
                     svc.ReleaseResources();
                 }

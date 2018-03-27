@@ -24,7 +24,7 @@ namespace SimMach.Sim {
         public void ConnectionRefused() {
             var run = NewTestRuntime();
             
-            run.LinkNets("localhost", "server");
+            run.Connect("localhost", "server");
             
             var responses = new List<object>();
             AddHelloWorldClient(run, "server", responses);
@@ -39,7 +39,7 @@ namespace SimMach.Sim {
             var run = NewTestRuntime();
 
             var responses = new List<object>();
-            run.LinkNets("localhost", "server");
+            run.Connect("localhost", "server");
             AddHelloWorldClient(run, "server", responses);
             
             run.AddScript("server:dead", async env => {
@@ -72,7 +72,7 @@ namespace SimMach.Sim {
             var requests = new List<object>();
             var responses = new List<object>();
 
-            run.LinkNets("localhost", "server");
+            run.Connect("localhost", "server");
             
             AddHelloWorldClient(run, "server", responses);
             AddHelloWorldServer(run, "server", requests);
@@ -90,7 +90,7 @@ namespace SimMach.Sim {
             var requests = new List<object>();
             var responses = new List<object>();
 
-            run.LinkNets("localhost", "server");
+            run.Connect("localhost", "server");
             
             AddHelloWorldClient(run, "server", responses);
             AddHelloWorldServer(run, "server", requests);
@@ -112,8 +112,8 @@ namespace SimMach.Sim {
             var requests = new List<object>();
             var responses = new List<object>();
 
-            run.LinkNets("localhost", "proxy");
-            run.LinkNets("proxy", "server");
+            run.Connect("localhost", "proxy");
+            run.Connect("proxy", "server");
 
             AddHelloWorldClient(run, "proxy", responses);
             AddHelloWorldProxy(run, "proxy", "server");
@@ -195,7 +195,7 @@ namespace SimMach.Sim {
         [Test]
         public void EachOutgoingConnectionIsOnItsOwnSocket() {
             var run = NewTestRuntime();
-            run.LinkNets("localhost", "api");
+            run.Connect("localhost", "api");
 
             async Task SendAndWait(IEnv env, IConn sock) {
                 using (sock) {
@@ -251,7 +251,7 @@ namespace SimMach.Sim {
             var eventsToSend = 5;
             var closed = false;
             
-            run.LinkNets("localhost", "api");
+            run.Connect("localhost", "api");
             run.AddScript("localhost:console", async env => {
                 using (var conn = await env.Connect("api", 80)) {
                     await conn.Write("SUBSCRIBE");

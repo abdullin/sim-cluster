@@ -31,7 +31,7 @@ namespace SimMach {
 
         
         
-        public void LinkNets(string from, string to, Action<RouteDef> cfg = null) {
+        public void Connect(string from, string to, Action<RouteDef> cfg = null) {
             Routes.Add(new RouteId(from, to), MakeRouteDef(cfg));
             Routes.Add(new RouteId(to, from), MakeRouteDef(cfg));
         }

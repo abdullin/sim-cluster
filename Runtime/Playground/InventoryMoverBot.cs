@@ -7,7 +7,7 @@ using SimMach.Playground.Backend;
 using SimMach.Sim;
 
 namespace SimMach.Playground {
-    public sealed class RingMoverBot {
+    public sealed class InventoryMoverBot {
 
         public int RingSize = 5;
         public string[] Machines;
@@ -19,7 +19,7 @@ namespace SimMach.Playground {
         decimal _finalCount;
 
 
-        public RingMoverBot(params string[] machines) {
+        public InventoryMoverBot(params string[] machines) {
             Machines = machines;
         }
 
