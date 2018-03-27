@@ -139,14 +139,16 @@ namespace SimMach.Sim {
             return SimDelayTask.Delay(i);
         }
 
-        Exception _halt;
+        Exception _haltError;
+        string _haltMessage;
 
-        public void Halt(string ex) {
-            _halt = new ApplicationException(ex);
+        public void Halt(string message, Exception error) {
+            _haltError = error;
+            _haltMessage = message;
         }
 
         public void Run(Stream trace = null) {
-            _halt = null;
+            _haltError = null;
 
             var watch = Stopwatch.StartNew();
             var reason = "none";
@@ -175,8 +177,8 @@ namespace SimMach.Sim {
                         default:
                             throw new InvalidOperationException();
                     }
-
-                    if (_halt != null) {
+                    
+                    if (_haltError != null || _haltMessage != null) {
                         reason = "halt";
                         break;
                     }
@@ -198,7 +200,7 @@ namespace SimMach.Sim {
                 }
             } catch (Exception ex) {
                 reason = "fatal";
-                _halt = ex;
+                _haltError = ex;
                 Console.WriteLine("Fatal: " + ex);
             } finally {
                 if (_folder != null) {
@@ -210,10 +212,14 @@ namespace SimMach.Sim {
 
             var softTime = TimeSpan.FromTicks(_time);
             var factor = softTime.TotalHours / watch.Elapsed.TotalHours;
+
+            if (_haltMessage != null) {
+                reason = _haltMessage.ToUpper();
+            }
             Debug($"{reason.ToUpper()} at {softTime}");
 
-            if (_halt != null) {
-                Console.WriteLine(_halt.Demystify());
+            if (_haltError != null) {
+                Console.WriteLine(_haltError.Demystify());
             }
 
             Console.WriteLine($"Simulated {Moment.Print(softTime)} in {_steps} steps.");
@@ -225,7 +231,7 @@ namespace SimMach.Sim {
             foreach (var svc in Filter(selector)) {
                 svc.Launch(ex => {
                     if (ex != null) {
-                        _halt = ex;
+                        _haltError = ex;
                     }
                 });
             }

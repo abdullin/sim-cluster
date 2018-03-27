@@ -62,9 +62,9 @@ namespace SimMach.Sim {
             return await _machine.Bind(this, port, timeout);
         }
 
-        public void Halt(string message) {
+        public void Halt(string message, Exception error) {
             Debug(message);
-            _machine.Runtime.Halt(message);
+            _machine.Runtime.Halt(message, error);
         }
 
         public string GetLocalFolder(string name) {

@@ -15,7 +15,7 @@ namespace SimMach {
         Task<IConn> Connect(SimEndpoint endpoint);
         Task<ISocket> Bind(ushort port, TimeSpan timeout);
 
-        void Halt(string message);
+        void Halt(string message, Exception error = null);
 
         string GetLocalFolder(string name);
 

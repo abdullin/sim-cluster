@@ -114,7 +114,7 @@ namespace SimMach.Playground.Backend {
                             break;
                     }
                 } catch (Exception ex) {
-                    _env.Halt($"Error while processing {req}: {ex.Demystify()}");
+                    _env.Halt($"Error while processing {req}", ex);
                 }
             }
         }

@@ -31,6 +31,7 @@ namespace SimMach.Playground {
                     await env.Delay(5.Sec());
                 }
                 finalCount = await lib.Count();
+                env.Halt("DONE");
             });
             
             sim.RunPlan(async plan => {
