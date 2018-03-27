@@ -13,7 +13,7 @@ namespace SimMach.Sim {
             bool disposed = false;
             
             
-            runtime.Svc.Add("run", e => new TestEngine(
+            runtime.Def.Add("run", e => new TestEngine(
                 async () => { run = true; },
                 async () => { disposed = true;}
             ));
@@ -32,7 +32,7 @@ namespace SimMach.Sim {
             bool disposed = false;
             
             
-            runtime.Svc.Add("run", e => new TestEngine(
+            runtime.Def.Add("run", e => new TestEngine(
                 async () => {
                     run = true;
                     throw new InvalidOperationException();
@@ -52,7 +52,7 @@ namespace SimMach.Sim {
             bool run = false;
             bool disposed = false;
             
-            runtime.Svc.Add("run", e => new TestEngine(
+            runtime.Def.Add("run", e => new TestEngine(
                 async () => {
                     run = true;
                     await e.Delay(10.Minutes());
@@ -77,7 +77,7 @@ namespace SimMach.Sim {
             bool disposeStart = false;
             bool disposeComplete = false;
             
-            runtime.Svc.Add("run", e => new TestEngine(
+            runtime.Def.Add("run", e => new TestEngine(
                 async () => {
                     try {
                         await e.SimulateWork(Timeout.InfiniteTimeSpan, e.Token);

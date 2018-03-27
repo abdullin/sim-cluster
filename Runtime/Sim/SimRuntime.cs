@@ -61,11 +61,11 @@ namespace SimMach.Sim {
             return folder;
         }
 
-        public SimRuntime(ClusterDef topology, NetworkDef net) {
+        public SimRuntime(ClusterDef def) {
 
-            Network = new SimNetwork(net, this);
+            Network = new SimNetwork(def, this);
             
-            foreach (var machine in topology.Dictionary.GroupBy(i => i.Key.Machine)) {
+            foreach (var machine in def.Services.GroupBy(i => i.Key.Machine)) {
                 var m = new SimMachine(machine.Key, this, Network);
 
                 foreach (var pair in machine) {

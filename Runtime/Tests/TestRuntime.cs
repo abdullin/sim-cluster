@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace SimMach.Sim {
     public sealed class TestRuntime {
-        public readonly ClusterDef Svc = new ClusterDef();
-        public readonly NetworkDef Net = new NetworkDef();
+        public readonly ClusterDef Def = new ClusterDef();
+        
         
         public TimeSpan MaxTime = TimeSpan.MaxValue;
         public TimeSpan? MaxInactive = TimeSpan.MaxValue;
@@ -19,7 +19,7 @@ namespace SimMach.Sim {
 
 
         public void RunPlan(Func<ISimPlan, Task> plan) {
-            var env = new SimRuntime(Svc, Net) {
+            var env = new SimRuntime(Def) {
                 MaxSteps = MaxSteps,
                 MaxTime = MaxTime
             };
@@ -39,7 +39,7 @@ namespace SimMach.Sim {
         }
 
         public void RunScript(Func<IEnv, Task> script) {
-            Svc.Add("local:script", script);
+            Def.Add("local:script", script);
             RunAll();
         }
 

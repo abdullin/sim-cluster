@@ -14,7 +14,7 @@ namespace SimMach.Sim {
                 MaxInactive = 2.Minutes()
             };
 
-            test.Svc.Add("com:test", async env => {
+            test.Def.Add("com:test", async env => {
                 bootCount++;
                 while (!env.Token.IsCancellationRequested) {
                     await env.SimulateWork(100.Ms());
@@ -40,7 +40,7 @@ namespace SimMach.Sim {
             var launched = true;
             var terminated = false;
 
-            test.Svc.Add("com:test", async env => {
+            test.Def.Add("com:test", async env => {
                 launched = true;
                 try {
                     while (!env.Token.IsCancellationRequested) {
@@ -71,7 +71,7 @@ namespace SimMach.Sim {
             
             var terminated = TimeSpan.Zero;
 
-            test.Svc.Add("com:test", async env => {
+            test.Def.Add("com:test", async env => {
                 try {
                     while (!env.Token.IsCancellationRequested) {
                         await env.SimulateWork(10.Sec(), env.Token);

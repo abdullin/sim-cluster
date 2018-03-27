@@ -24,8 +24,7 @@ namespace SimMach.Sim {
         public void ConnectionRefused() {
             var run = NewTestRuntime();
             
-            run.Net.Link("localhost", "server");
-            run.Net.TraceRoute("localhost", "server");
+            run.Def.Link("localhost", "server");
             
             var responses = new List<object>();
             AddHelloWorldClient(run, "server", responses);
@@ -40,10 +39,10 @@ namespace SimMach.Sim {
             var run = NewTestRuntime();
 
             var responses = new List<object>();
-            run.Net.Link("localhost", "server");
+            run.Def.Link("localhost", "server");
             AddHelloWorldClient(run, "server", responses);
             
-            run.Svc.Add("server:dead", async env => {
+            run.Def.Add("server:dead", async env => {
                 using (var socket = await env.Bind(80)) {
                     while (!env.Token.IsCancellationRequested) {
                         await env.Delay(10.Minutes());
@@ -73,7 +72,7 @@ namespace SimMach.Sim {
             var requests = new List<object>();
             var responses = new List<object>();
 
-            run.Net.Link("localhost", "server");
+            run.Def.Link("localhost", "server");
             
             AddHelloWorldClient(run, "server", responses);
             AddHelloWorldServer(run, "server", requests);
@@ -91,7 +90,7 @@ namespace SimMach.Sim {
             var requests = new List<object>();
             var responses = new List<object>();
 
-            run.Net.Link("localhost", "server");
+            run.Def.Link("localhost", "server");
             
             AddHelloWorldClient(run, "server", responses);
             AddHelloWorldServer(run, "server", requests);
@@ -113,8 +112,8 @@ namespace SimMach.Sim {
             var requests = new List<object>();
             var responses = new List<object>();
 
-            run.Net.Link("localhost", "proxy");
-            run.Net.Link("proxy", "server");
+            run.Def.Link("localhost", "proxy");
+            run.Def.Link("proxy", "server");
 
             AddHelloWorldClient(run, "proxy", responses);
             AddHelloWorldProxy(run, "proxy", "server");
@@ -127,7 +126,7 @@ namespace SimMach.Sim {
         }
 
         static void AddHelloWorldServer(TestRuntime run, string endpoint, List<object> requests) {
-            run.Svc.Add(endpoint + ":engine", async env => {
+            run.Def.Add(endpoint + ":engine", async env => {
                 async void Handler(IConn conn) {
                     using (conn) {
                         var msg = await conn.Read(5.Sec());
@@ -148,7 +147,7 @@ namespace SimMach.Sim {
 
         static void AddHelloWorldProxy(TestRuntime run, string endpoint, string target) {
             
-            run.Svc.Add(endpoint + ":engine", async env => {
+            run.Def.Add(endpoint + ":engine", async env => {
             
                 async void Handler(IConn conn) {
                     using (conn) {
@@ -179,7 +178,7 @@ namespace SimMach.Sim {
         }
 
         static void AddHelloWorldClient(TestRuntime run, string endpoint, List<object> responses) {
-            run.Svc.Add("localhost:console", async env => {
+            run.Def.Add("localhost:console", async env => {
                 try {
                     using (var conn = await env.Connect(endpoint, 80)) {
                         await conn.Write("Hello");
@@ -196,7 +195,7 @@ namespace SimMach.Sim {
         [Test]
         public void EachOutgoingConnectionIsOnItsOwnSocket() {
             var run = NewTestRuntime();
-            run.Net.Link("localhost", "api");
+            run.Def.Link("localhost", "api");
 
             async Task SendAndWait(IEnv env, IConn sock) {
                 using (sock) {
@@ -215,7 +214,7 @@ namespace SimMach.Sim {
                 }
             }
 
-            run.Svc.Add("localhost", async env => {
+            run.Def.Add("localhost", async env => {
                 for (int i = 0; i < expectedConnections; i++) {
                     var conn = await env.Connect("api", 80);
                     SendAndWait(env, conn);
@@ -224,7 +223,7 @@ namespace SimMach.Sim {
 
 
 
-            run.Svc.Add("api", async env => {
+            run.Def.Add("api", async env => {
                 using (var sock = await env.Bind(80)) {
                     while (!env.Token.IsCancellationRequested) {
                         var conn = await sock.Accept();
@@ -252,8 +251,8 @@ namespace SimMach.Sim {
             var eventsToSend = 5;
             var closed = false;
             
-            run.Net.Link("localhost", "api");
-            run.Svc.Add("localhost:console", async env => {
+            run.Def.Link("localhost", "api");
+            run.Def.Add("localhost:console", async env => {
                 using (var conn = await env.Connect("api", 80)) {
                     await conn.Write("SUBSCRIBE");
                     while (!env.Token.IsCancellationRequested) {
@@ -269,7 +268,7 @@ namespace SimMach.Sim {
                 }
             });
 
-            run.Svc.Add("api:engine", async env => {
+            run.Def.Add("api:engine", async env => {
                 async void Handler(IConn conn) {
                     using (conn) {
                         await conn.Read(5.Sec());

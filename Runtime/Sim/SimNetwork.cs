@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace SimMach.Sim {
@@ -10,14 +11,14 @@ namespace SimMach.Sim {
     sealed class SimNetwork {
         readonly SimRuntime _runtime;
 
-        public SimNetwork(NetworkDef def, SimRuntime runtime) {
+        public SimNetwork(ClusterDef def, SimRuntime runtime) {
             _runtime = runtime;
 
             // we register each link as a network service
             foreach (var link in def.Links) {
                 var service = new ServiceId($"network:{link.Client}->{link.Server}");
                 var scheduler = new SimScheduler(_runtime, service);
-                var debug = def.DebugRoutes.Contains(link);
+                var debug = true;//def.DebugRoutes.Contains(link);
                 _routes.Add(link, new SimRoute(scheduler, this, link, debug));
             }
         }
@@ -34,7 +35,9 @@ namespace SimMach.Sim {
         
 
         public void SendPacket(SimPacket packet) {
-            var routeId = new RouteId(packet.Source.Machine, packet.Destination.Machine);
+            var source = packet.Source.Machine;
+            var destination = packet.Destination.Machine;
+            var routeId = new RouteId(GetNetwork(source), GetNetwork(destination));
             _routes[routeId].Send(packet);
         }
 
@@ -58,8 +61,20 @@ namespace SimMach.Sim {
             SendPacket(back);
         }
 
+
+        static string GetNetwork(string machine) {
+            if (machine.IndexOf('.') < 0) {
+                return machine;
+            }
+
+            return string.Join('.', machine.Split('.').Skip(1));
+
+        }
+
         public bool TryGetRoute(string from, string to, out SimRoute r) {
-            var linkId = new RouteId(from, to);
+            
+            
+            var linkId = new RouteId(GetNetwork(from), GetNetwork(to));
             return _routes.TryGetValue(linkId, out r);
         }
 

@@ -11,16 +11,17 @@ namespace SimMach.Playground {
         public void Playground() {
             var sim = new TestRuntime() {MaxTime = 50.Sec()};
             // network connectivity
-            sim.Net.Link("client", "api1", "api2", "mv");
+            sim.Def.Link("www", "public");
+            sim.Def.Link("public", "internal");
             
             // install MV and backend
-            InstallCommitLog(sim, "mv");
-            InstallBackend(sim, "api1", "api2");
+            InstallCommitLog(sim, "cl.internal");
+            InstallBackend(sim, "api1.public", "api2.public");
             
             var finalCount = 0M;
             // run a bot that moves items between locations
-            sim.Svc.Add("client", async env => {
-                var lib = new BackendClient(env, "api1:443", "api2:443");
+            sim.Def.Add("client.www", async env => {
+                var lib = new BackendClient(env, "api1.public:443", "api2.public:443");
                 const int ringSize = 5;
                 await lib.AddItem(0, 1);
                 
@@ -49,15 +50,15 @@ namespace SimMach.Playground {
 
         static void InstallBackend(TestRuntime sim, params string[] servers) {
             foreach (var server in servers) {
-                sim.Svc.Add(server, env => {
-                    var client = new CommitLogClient(env, "mv:443");
+                sim.Def.Add(server, env => {
+                    var client = new CommitLogClient(env, "cl.internal:443");
                     return new BackendServer(env, 443, client);
                 });    
             }
         }
 
         static void InstallCommitLog(TestRuntime sim, string service) {
-            sim.Svc.Add(service, env => new CommitLogServer(env, 443));
+            sim.Def.Add(service, env => new CommitLogServer(env, 443));
         }
     }
     

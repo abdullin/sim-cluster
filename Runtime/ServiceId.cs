@@ -2,64 +2,8 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace SimMach {
-    public class ClusterDef {
-
-        public readonly Dictionary<ServiceId, Func<IEnv, IEngine>> Dictionary =
-            new Dictionary<ServiceId, Func<IEnv, IEngine>>(ServiceId.Comparer);
-
-
-        public void Add(string svc, Func<IEnv, IEngine> run) {
-            if (!svc.Contains(':')) {
-                svc = svc + ":" + svc;
-            }
-            Dictionary.Add(new ServiceId(svc), run);
-        }
-        
-        
-        public void Add(string svc, Func<IEnv, Task> run) {
-            Add(svc, env => new LambdaEngine(run(env)));
-        }
-
-        
-
-        sealed class LambdaEngine : IEngine {
-            readonly Task _func;
-
-
-            public LambdaEngine(Task func) {
-                _func = func;
-            }
-
-            public Task Run() {
-               return _func;
-            }
-
-            public Task Dispose() {
-                return Task.CompletedTask;
-            }
-        }
-
-
-
-
-        /* public void PrettyPrint() {
-             var machines = this.GroupBy(p => p.Key.Machine);
-             // printing
-             foreach (var m in machines) {
-                 Console.WriteLine($"{m.Key}");
- 
-                 foreach (var svc in m) {
-                     Console.WriteLine($"  {svc.Key.Service}");
-                 }
-             }
-         }*/
-    }
-
-  
-    
     public class ServiceId {
 
         public readonly string Full;

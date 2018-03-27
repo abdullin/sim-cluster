@@ -48,7 +48,7 @@ namespace SimMach.Sim {
 
 
         public void Debug(string message) {
-            Runtime.Debug($"  {Name,-13} {message}");
+            Runtime.Debug($"  {message}");
         }
 
         public async Task<IConn> Connect(SimProc process, SimEndpoint destination) {
