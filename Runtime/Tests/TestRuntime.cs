@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SimMach.Sim {
     public sealed class TestRuntime {
-        public readonly MachineDef Svc = new MachineDef();
+        public readonly ClusterDef Svc = new ClusterDef();
         public readonly NetworkDef Net = new NetworkDef();
         
         public TimeSpan MaxTime = TimeSpan.MaxValue;

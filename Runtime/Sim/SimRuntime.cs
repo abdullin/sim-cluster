@@ -61,7 +61,7 @@ namespace SimMach.Sim {
             return folder;
         }
 
-        public SimRuntime(MachineDef topology, NetworkDef net) {
+        public SimRuntime(ClusterDef topology, NetworkDef net) {
 
             Network = new SimNetwork(net, this);
             

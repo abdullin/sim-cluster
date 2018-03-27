@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 
 namespace SimMach {
-    public class MachineDef {
+    public class ClusterDef {
 
         public readonly Dictionary<ServiceId, Func<IEnv, IEngine>> Dictionary =
             new Dictionary<ServiceId, Func<IEnv, IEngine>>(ServiceId.Comparer);
@@ -57,50 +57,8 @@ namespace SimMach {
              }
          }*/
     }
-    
-    public sealed class NetworkDef {
-        readonly Dictionary<RouteId, string> _dictionary = new Dictionary<RouteId, string>(RouteId.Comparer);
-        
-        
 
-        public ICollection<RouteId> Links => _dictionary.Keys;
-
-        public HashSet<RouteId> DebugRoutes = new HashSet<RouteId>(RouteId.Comparer);
-
-        public void Link(string client, string server) {
-            _dictionary.Add(new RouteId(client, server), null);
-            _dictionary.Add(new RouteId(server, client), null);
-        }
-
-        public void Link(string from, params string[] server) {
-            foreach (var s in server) {
-                Link(from, s);
-            }
-        }
-
-        public void TraceRoute(string client, string server) {
-            DebugRoutes.Add(new RouteId(client, server));
-            DebugRoutes.Add(new RouteId(server, client));
-        }
-        
-    }
-
-    public class RouteId {
-        public readonly string Client;
-        public readonly string Server;
-        public RouteId(string client, string server) {
-            Client = client;
-            Server = server;
-        }
-
-        public string Full => $"{Client}->{Server}";
-
-        public override string ToString() {
-            return Full;
-        }
-
-        public static readonly IEqualityComparer<RouteId> Comparer = new DelegateComparer<RouteId>(id => id.Full);
-    }
+  
     
     public class ServiceId {
 
@@ -121,7 +79,7 @@ namespace SimMach {
             var dparts = Machine.Split('.');
 
 
-            Zone = dparts.Last();
+            Zone = dparts.Length == 1 ? Machine : string.Join('.', dparts.Skip(1));
         }
 
         

@@ -11,8 +11,8 @@ namespace SimMach.Playground {
         public void Playground() {
             var sim = new TestRuntime() {MaxTime = 50.Sec()};
             // network connectivity
-            sim.Net.Link("client", "api1", "api2");
-            sim.Net.Link("mv", "api1", "api2");
+            sim.Net.Link("client", "api1", "api2", "mv");
+            
             // install MV and backend
             InstallCommitLog(sim, "mv");
             InstallBackend(sim, "api1", "api2");
