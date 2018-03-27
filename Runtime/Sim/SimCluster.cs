@@ -9,12 +9,13 @@ namespace SimMach.Sim {
         
         readonly SimRuntime _runtime;
         
-        
         readonly Dictionary<string, SimMachine> _machines = new Dictionary<string, SimMachine>();
         readonly Dictionary<RouteId, SimRoute> _routes = new Dictionary<RouteId, SimRoute>(RouteId.Comparer);
+        public readonly SimRandom Rand;
         
         public SimCluster(ClusterDef cluster, SimRuntime runtime) {
             _runtime = runtime;
+            Rand = _runtime.Rand;
 
             // we register each link as a network service
             foreach (var (id, def) in cluster.Routes) {
@@ -22,7 +23,6 @@ namespace SimMach.Sim {
                 var scheduler = new SimScheduler(_runtime, service);
                 _routes.Add(id, new SimRoute(scheduler, this, id, def));
             }
-            
             
             foreach (var machine in cluster.Services.GroupBy(i => i.Key.Machine)) {
                 var m = new SimMachine(machine.Key, runtime, this);
@@ -33,23 +33,14 @@ namespace SimMach.Sim {
                 _machines.Add(machine.Key, m);
             }
         }
-
         
         public bool ResolveHost(string name, out SimMachine m) {
             return _machines.TryGetValue(name, out m);
         }
 
-        
-        public bool DebugPackets;
-
-
         public void Debug(string message) {
-            if (DebugPackets)
-                _runtime.Debug(message);
+            _runtime.Debug(message);
         }
-
-        
-
 
         public void SendPacket(SimPacket packet) {
             var source = packet.Source.Machine;
@@ -58,14 +49,11 @@ namespace SimMach.Sim {
             _routes[routeId].Send(packet);
         }
 
-
         public void InternalDeliver(SimPacket msg) {
             if (ResolveHost(msg.Destination.Machine, out var machine)) {
                 if (machine.TryDeliver(msg)) {
                     return;
                 }
-
-
             }
 
             var back = new SimPacket(msg.Destination, msg.Source,
@@ -74,10 +62,8 @@ namespace SimMach.Sim {
                 SimFlag.Reset
             );
 
-
             SendPacket(back);
         }
-
 
         static string GetNetwork(string machine) {
             if (machine.IndexOf('.') < 0) {
@@ -94,7 +80,6 @@ namespace SimMach.Sim {
 
             return _machines.SelectMany(p => p.Value.Services.Values).Where(p => filter(p.Id));
         }
-        
         
         public void StartServices(Predicate<ServiceId> selector = null) {
             var services = Filter(selector).ToArray();
@@ -120,7 +105,6 @@ namespace SimMach.Sim {
             return Task.WhenAll(tasks);
         }
         
-
         public bool TryGetRoute(string from, string to, out SimRoute r) {
             var linkId = new RouteId(GetNetwork(from), GetNetwork(to));
             return _routes.TryGetValue(linkId, out r);

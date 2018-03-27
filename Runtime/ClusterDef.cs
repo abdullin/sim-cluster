@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using SimMach.Sim;
 
 namespace SimMach {
     public class ClusterDef {
@@ -30,15 +31,17 @@ namespace SimMach {
 
         
         
-        public void LinkNets(string from, string to, TimeSpan?latency= null) {
-            var def = new RouteDef {
-                Latency = latency ?? 50.Ms()
-            };
-            Routes.Add(new RouteId(from, to), def);
-            Routes.Add(new RouteId(to, from), def);
+        public void LinkNets(string from, string to, Action<RouteDef> cfg = null) {
+            Routes.Add(new RouteId(from, to), MakeRouteDef(cfg));
+            Routes.Add(new RouteId(to, from), MakeRouteDef(cfg));
         }
 
-        
-       
+        static RouteDef MakeRouteDef(Action<RouteDef> cfg) {
+            var def = new RouteDef {
+                Latency = r => 50.Ms()
+            };
+            cfg?.Invoke(def);
+            return def;
+        }
     }
 }

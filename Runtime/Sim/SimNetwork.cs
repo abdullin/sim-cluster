@@ -186,6 +186,7 @@ namespace SimMach.Sim {
     public sealed class SimEndpoint {
         public readonly string Machine;
         public readonly ushort Port;
+        
         public SimEndpoint(string machine, ushort port) {
             Machine = machine;
             Port = port;
@@ -229,9 +230,8 @@ namespace SimMach.Sim {
             _factory.StartNew(async () => {
                 // delivery wait
                 try {
-                    
-                    
-                    await SimDelayTask.Delay(_def.Latency);
+                    var latency = _def.Latency(_network.Rand);
+                    await SimDelayTask.Delay(latency);
                     _network.InternalDeliver(msg);
                 } catch (Exception ex) {
                     Debug($"FATAL: {ex}");

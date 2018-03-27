@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using SimMach.Sim;
 
 namespace SimMach {
     
@@ -22,7 +23,7 @@ namespace SimMach {
     }
 
     public class RouteDef {
-        public TimeSpan Latency = 50.Ms();
+        public Func<SimRandom,TimeSpan> Latency;
         public bool Debug;
     }
 }
