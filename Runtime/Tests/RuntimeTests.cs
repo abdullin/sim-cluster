@@ -21,7 +21,7 @@ namespace SimMach.Sim {
                 }
             });
             
-            test.RunPlan(async plan => {
+            test.Run(async plan => {
                 plan.StartServices();
                 await plan.Delay(TimeSpan.FromMinutes(1));
                 await plan.StopServices();
@@ -52,7 +52,7 @@ namespace SimMach.Sim {
                 }
             });
             
-            test.RunPlan(async plan => {
+            test.Run(async plan => {
                 plan.StartServices();
                 await plan.Delay(1.Sec());
                 await plan.StopServices(grace:1.Sec());
@@ -81,7 +81,7 @@ namespace SimMach.Sim {
                 }
             });
             
-            test.RunPlan(async plan => {
+            test.Run(async plan => {
                 plan.StartServices();
                 await plan.Delay(TimeSpan.FromSeconds(1));
                 await plan.StopServices();

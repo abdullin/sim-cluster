@@ -48,7 +48,7 @@ namespace SimMach.Sim {
         }
     }
     
-    class SimConn  {
+    public class SimConn  {
 
         // maintain and send connection ID;
         readonly SimSocket _socket;
@@ -204,7 +204,7 @@ namespace SimMach.Sim {
         }
     }
 
-    sealed class SimRoute {
+    public sealed class SimRoute {
         readonly SimCluster _network;
         readonly RouteId _route;
         SimScheduler _scheduler;

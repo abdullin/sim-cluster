@@ -18,7 +18,7 @@ namespace SimMach.Sim {
                 async () => { disposed = true;}
             ));
             
-            test.RunAll();
+            test.Run();
             Assert.IsTrue(disposed, nameof(disposed));
             Assert.IsTrue(run, nameof(run));
         }
@@ -40,7 +40,7 @@ namespace SimMach.Sim {
                 async () => { disposed = true;}
             ));
             
-            runtime.RunAll();
+            runtime.Run();
             Assert.IsTrue(disposed, nameof(disposed));
             Assert.IsTrue(run, nameof(run));
         }
@@ -60,7 +60,7 @@ namespace SimMach.Sim {
                 async () => { disposed = true;}
             ));
             
-            runtime.RunPlan(async e => {
+            runtime.Run(async e => {
                 e.StartServices();
                 await e.Delay(5.Sec());
                 await e.StopServices(grace: 2.Sec());
@@ -95,7 +95,7 @@ namespace SimMach.Sim {
                 }
             ));
             
-            test.RunPlan(async e => {
+            test.Run(async e => {
                 e.StartServices();
                 await e.Delay(5.Sec());
                 e.Debug("Start shutting down");

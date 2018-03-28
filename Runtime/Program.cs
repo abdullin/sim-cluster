@@ -16,30 +16,24 @@ namespace SimMach
     class Program {
         static void Main(string[] args) {
 
-            new PlaygroundTests().Playground();
+            var test = PlaygroundTests.InventoryMoverBotOver3GConnection();
+
+            test.Run();
+
+            var old = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Red;
+            
+            foreach (var bot in test.Bots) {
+                foreach (var issue in bot.Verify()) {
+                    Console.WriteLine($"  {bot.GetType().Name} expected {issue.Field} to be {issue.Expected} but got {issue.Actual}");
+                    
+                }
+            }
+
+            Console.ForegroundColor = old;
+
         }
 
-        static async Task QuickProcess(IEnv env) {
-            env.Debug("Starting");
-            try {
-                while (!env.Token.IsCancellationRequested) {
-                    await env.Delay(1.Sec(), env.Token);
-                }
-            } catch (TaskCanceledException) {
-                env.Debug("Abort");
-            }
-            env.Debug("Shutting down");
-        }
-        static async Task SlowProcess(IEnv env) {
-            env.Debug("Starting");
-            try {
-                while (!env.Token.IsCancellationRequested) {
-                    await env.Delay(5.Sec(), env.Token);
-                }
-            } catch (TaskCanceledException) {
-                env.Debug("Abort");
-            }
-            env.Debug("Shutting down");
-        }
+        
     }
 }

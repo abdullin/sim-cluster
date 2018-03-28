@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using SimMach.Sim;
 
 namespace SimMach.Sim {
-    class SimService {
+    public class SimService {
         public readonly ServiceId Id;
         readonly Func<IEnv, IEngine> _launcher;
         

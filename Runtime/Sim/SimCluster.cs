@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 
 namespace SimMach.Sim {
-    sealed class SimCluster : IDisposable {
+    public sealed class SimCluster : IDisposable {
         
         readonly SimRuntime _runtime;
         

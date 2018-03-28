@@ -7,7 +7,7 @@ using LightningDB;
 
 namespace SimMach.Sim {
 
-    class SimProc : IEnv, IDisposable {
+    public class SimProc : IEnv, IDisposable {
         readonly int _procId;
         readonly TaskFactory _scheduler;
         public readonly ServiceId Id;

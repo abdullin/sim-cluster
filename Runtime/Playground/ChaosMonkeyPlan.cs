@@ -17,6 +17,8 @@ namespace SimMach.Playground {
                 .Select(p => p.Key)
                 .Where(ApplyToMachines)
                 .ToArray();
+            
+            plan.Debug($"Monkey has plans for {string.Join(", ", deathPool)}");
 
             while (true) {
                 await plan.Delay(plan.Rand.Next(2, 5).Sec());

@@ -10,7 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace SimMach.Sim {
-    class SimRuntime  {
+    public class SimRuntime  {
        
         
         public readonly ClusterDef Def;

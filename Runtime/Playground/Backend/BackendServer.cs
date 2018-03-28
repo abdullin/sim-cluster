@@ -50,7 +50,7 @@ namespace SimMach.Playground.Backend {
                     }
                 }
             } catch (TaskCanceledException) {
-                // nothing - shutting down
+                return;
             }
         }
 
@@ -77,6 +77,7 @@ namespace SimMach.Playground.Backend {
                     await _env.Delay(100.Ms());
                 } catch (TaskCanceledException) {
                     // nothing
+                    return;
                 }
             }
         }

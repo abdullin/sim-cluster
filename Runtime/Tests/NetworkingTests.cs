@@ -16,7 +16,7 @@ namespace SimMach.Sim {
             var responses = new List<object>();
             AddHelloWorldClient(run, "server", responses);
 
-            run.RunAll();
+            run.Run();
             AssertOneError(responses);
         }
 
@@ -29,7 +29,7 @@ namespace SimMach.Sim {
             var responses = new List<object>();
             AddHelloWorldClient(run, "server", responses);
             
-            run.RunAll();
+            run.Run();
             
             AssertOneError(responses, "reset");
         }
@@ -50,7 +50,7 @@ namespace SimMach.Sim {
                 }
             });
             
-            run.RunAll();
+            run.Run();
             
             AssertOneError(responses, "timeout");
         }
@@ -77,7 +77,7 @@ namespace SimMach.Sim {
             AddHelloWorldClient(run, "server", responses);
             AddHelloWorldServer(run, "server", requests);
 
-            run.RunAll();
+            run.Run();
 
             CollectionAssert.AreEquivalent(new object[]{"Hello"}, requests);
             CollectionAssert.AreEquivalent(new object[]{"World"}, responses);
@@ -95,7 +95,7 @@ namespace SimMach.Sim {
             AddHelloWorldClient(run, "server", responses);
             AddHelloWorldServer(run, "server", requests);
 
-            run.RunPlan(async plan => {
+            run.Run(async plan => {
                 plan.StartServices(env => env.Machine == "server");
                 await plan.StopServices();
                 plan.StartServices();
@@ -119,7 +119,7 @@ namespace SimMach.Sim {
             AddHelloWorldProxy(run, "proxy", "server");
             AddHelloWorldServer(run, "server", requests);
 
-            run.RunAll();
+            run.Run();
 
             CollectionAssert.AreEquivalent(new object[]{"Hello"}, requests);
             CollectionAssert.AreEquivalent(new object[]{"World"}, responses);
@@ -234,7 +234,7 @@ namespace SimMach.Sim {
                 }
             });
             
-            run.RunAll();
+            run.Run();
             
             Assert.AreEqual(expectedConnections, ports.Count, "port per conn");
             Assert.AreEqual(expectedConnections, connections);
@@ -288,7 +288,7 @@ namespace SimMach.Sim {
                 }
             });
 
-            run.RunAll();
+            run.Run();
 
             Assert.AreEqual(eventsToSend, eventsReceived);
             Assert.IsTrue(closed, nameof(closed));

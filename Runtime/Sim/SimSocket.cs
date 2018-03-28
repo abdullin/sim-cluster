@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace SimMach.Sim {
-    sealed class SimSocket : ISocket {
+    public sealed class SimSocket : ISocket {
         readonly SimProc _proc;
         public readonly SimEndpoint Endpoint;
         readonly SimCluster _net;

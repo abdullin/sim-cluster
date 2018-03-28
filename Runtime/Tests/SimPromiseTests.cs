@@ -86,7 +86,7 @@ namespace SimMach.Sim {
                 }
             });
             
-            test.RunPlan(async plan => {
+            test.Run(async plan => {
                 plan.StartServices();
                 await plan.Delay(1000.Sec());
                 await plan.StopServices(grace:1.Sec());

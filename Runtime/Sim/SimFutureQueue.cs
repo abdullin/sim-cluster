@@ -12,7 +12,7 @@ namespace SimMach.Sim {
         int Id { get; }
     }
     
-    class SimFutureQueue {
+    public class SimFutureQueue {
         readonly SortedList<long, List<(SimScheduler, object)>>
             _future = new SortedList<long, List<(SimScheduler, object)>>();
 
@@ -101,7 +101,7 @@ namespace SimMach.Sim {
         }
     }
 
-    struct FutureItem {
+    public struct FutureItem {
         public readonly long Time;
         public readonly SimScheduler Scheduler;
         public readonly object Item;

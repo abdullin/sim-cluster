@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 
 namespace SimMach.Sim {
-    class SimMachine {
+    public class SimMachine {
         public readonly string Name;
         public readonly SimRuntime Runtime;
         public readonly SimCluster Cluster;

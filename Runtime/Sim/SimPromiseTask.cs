@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace SimMach.Sim {
     
-    sealed class SimFuture<T> : IFuture<T> {
+    public sealed class SimFuture<T> : IFuture<T> {
         internal T Result;
         internal Exception Error;
         public bool Completed;

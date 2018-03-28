@@ -7,7 +7,26 @@ using SimMach.Playground.Backend;
 using SimMach.Sim;
 
 namespace SimMach.Playground {
-    public sealed class InventoryMoverBot {
+
+
+    public struct BotIssue {
+        public readonly string Field;
+        public readonly object Expected;
+        public readonly object Actual;
+
+        public BotIssue(string field, object expected, object actual) {
+            Field = field;
+            Expected = expected;
+            Actual = actual;
+        }
+    }
+    
+    public interface IBot {
+        IList<BotIssue> Verify();
+        IEngine Engine(IEnv e);
+    }
+    
+    public sealed class InventoryMoverBot : IBot {
 
         public int RingSize = 5;
         public string[] Machines;
@@ -16,8 +35,8 @@ namespace SimMach.Playground {
         public bool HaltOnCompletion = false;
         public ushort Port = 443;
 
-        decimal _finalCount;
-
+        decimal _actualCount;
+        decimal _expectedCount;
 
         public InventoryMoverBot(params string[] machines) {
             Machines = machines;
@@ -26,13 +45,14 @@ namespace SimMach.Playground {
 
         public async Task Run(IEnv env) {
 
+            _expectedCount = 0M;
             var endpoints = Machines.Select(m => new SimEndpoint(m, Port)).ToArray();
-            
-      
             
             var lib = new BackendClient(env, endpoints);
         
             await lib.AddItem(0, 1);
+
+            _expectedCount = 1M;
                 
             for (int i = 0; i < Iterations; i++) {
                 var curr = i % RingSize;
@@ -40,16 +60,24 @@ namespace SimMach.Playground {
                 await lib.MoveItem(curr, next, 1);
                 await env.Delay(Delay);
             }
-            _finalCount = await lib.Count();
+            _actualCount = await lib.Count();
             if (HaltOnCompletion) {
                 env.Halt("DONE");
             }
         }
 
-        public void Verify() {
-            Assert.AreEqual(1M, _finalCount, nameof(_finalCount));
+        public IList<BotIssue> Verify() {
+            var botIssues = new List<BotIssue>();
+            
+            if (_actualCount != _expectedCount) {
+                botIssues.Add(new BotIssue("finalCount", _expectedCount, _actualCount));
+            }
+            return botIssues;
+            
         }
 
-        
+        public IEngine Engine(IEnv e) {
+            return new LambdaEngine(Run(e));
+        }
     }
 }

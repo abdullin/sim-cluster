@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace SimMach.Sim {
-    class SimControl  {
+    public class SimControl  {
         public readonly SimCluster Cluster;
         readonly SimRuntime _runtime;
 

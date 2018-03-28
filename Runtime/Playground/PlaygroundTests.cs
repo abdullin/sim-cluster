@@ -30,7 +30,7 @@ namespace SimMach.Playground {
             
             test.AddScript("bot", bot.Run);
             
-            test.RunPlan(async plan => {
+            test.Run(async plan => {
                 plan.StartServices();
                 await plan.Delay(6.Sec());
                 plan.Debug("REIMAGE api1");
@@ -43,35 +43,43 @@ namespace SimMach.Playground {
             
             bot.Verify();
         }
-        
-        
-        [Test]
-        public void InventoryMoverBotOver3GConnection() {
+
+
+
+        public static TestDef InventoryMoverBotOver3GConnection() {
             var test = new TestDef();
             
-            test.Connect("bot", "public", NetworkProfile.Mobile3G);
+            test.Connect("botnet", "public", NetworkProfile.Mobile3G);
             test.Connect("public", "internal", NetworkProfile.AzureIntranet);
 
             test.AddService("cl.internal", InstallCommitLog);
             test.AddService("api1.public", InstallBackend("cl.internal"));
             test.AddService("api2.public", InstallBackend("cl.internal"));
 
-            var bot = new InventoryMoverBot("api1.public", "api2.public") {
+            var mover = new InventoryMoverBot("api1.public", "api2.public") {
                 RingSize = 5,
                 Iterations = 10,
                 Delay = 5.Sec(),
                 HaltOnCompletion = true
             };
             
-            test.AddScript("bot", bot.Run);
-
+            test.AddBot(mover);
+            
             var monkey = new ChaosMonkeyPlan {
-                ApplyToMachines = s => s != "bot"
+                ApplyToMachines = s => s.StartsWith("api")
             };
+
+            //test.Plan = monkey.Run;
+            return test;
+
+        }
+        
+        
+        
+        [Test]
+        public void InventoryMoverBotOver3GConnectionTest() {
+            Verify.NUnit(InventoryMoverBotOver3GConnection());
             
-            test.RunPlan(monkey.Run);
-            
-            bot.Verify();
         }
 
 
@@ -86,4 +94,10 @@ namespace SimMach.Playground {
             return new CommitLogServer(env, 443);
         }
     }
+    
+    
+  
+    
+    
+    
 }

@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace SimMach.Sim {
-    sealed class SimScheduler : TaskScheduler {
+    public sealed class SimScheduler : TaskScheduler {
         readonly SimRuntime _runtime;
         readonly ServiceId _name;
 
