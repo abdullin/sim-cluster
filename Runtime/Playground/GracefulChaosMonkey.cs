@@ -17,6 +17,9 @@ namespace SimMach.Playground {
                 .Select(p => p.Key)
                 .Where(ApplyToMachines)
                 .ToArray();
+
+
+            plan.Cluster.Routes.Select(p => p.Key);
             
             plan.Debug($"Monkey has plans for {string.Join(", ", deathPool)}");
 

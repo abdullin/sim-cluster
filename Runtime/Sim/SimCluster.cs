@@ -7,20 +7,20 @@ using System.Threading.Tasks;
 namespace SimMach.Sim {
     public sealed class SimCluster : IDisposable {
         
-        readonly SimRuntime _runtime;
+        public readonly SimRuntime Runtime;
         
         public readonly Dictionary<string, SimMachine> Machines = new Dictionary<string, SimMachine>();
         public readonly Dictionary<RouteId, SimRoute> Routes = new Dictionary<RouteId, SimRoute>(RouteId.Comparer);
         public readonly SimRandom Rand;
         
         public SimCluster(ClusterDef cluster, SimRuntime runtime) {
-            _runtime = runtime;
-            Rand = _runtime.Rand;
+            Runtime = runtime;
+            Rand = Runtime.Rand;
 
             // we register each link as a network service
             foreach (var (id, def) in cluster.Routes) {
                 var service = new ServiceId($"network:{id.Source}->{id.Destinaton}");
-                var scheduler = new SimScheduler(_runtime, service);
+                var scheduler = new SimScheduler(Runtime, service);
                 Routes.Add(id, new SimRoute(scheduler, this, id, def));
             }
             
@@ -39,7 +39,7 @@ namespace SimMach.Sim {
         }
 
         public void Debug(string message) {
-            _runtime.Debug(message);
+            Runtime.Debug(message);
         }
 
         public void SendPacket(SimPacket packet) {
@@ -91,7 +91,7 @@ namespace SimMach.Sim {
             foreach (var svc in services) {
                 svc.Launch(ex => {
                     if (ex != null) {
-                        _runtime.Halt($"'{svc.Id.Full}' faulted", ex);
+                        Runtime.Halt($"'{svc.Id.Full}' faulted", ex);
                     }
                 });
             }
