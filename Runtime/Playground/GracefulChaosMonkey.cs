@@ -4,7 +4,9 @@ using System.Threading.Tasks;
 using SimMach.Sim;
 
 namespace SimMach.Playground {
-    sealed class ChaosMonkeyPlan {
+    sealed class GracefulChaosMonkey {
+
+        public Func<SimRandom, TimeSpan> DelayBetweenStrikes = rand => rand.Next(20, 90).Sec(); 
 
         public Func<string, bool> ApplyToMachines = s => true; 
         
@@ -19,7 +21,7 @@ namespace SimMach.Playground {
             plan.Debug($"Monkey has plans for {string.Join(", ", deathPool)}");
 
             while (true) {
-                await plan.Delay(plan.Rand.Next(2, 5).Sec());
+                await plan.Delay(DelayBetweenStrikes(plan.Rand));
 
                 var candidate = deathPool[plan.Rand.Next(0, deathPool.Length)];
                 var grace = plan.Rand.Next(0, 5).Sec();

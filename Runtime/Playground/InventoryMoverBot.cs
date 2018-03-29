@@ -8,24 +8,6 @@ using SimMach.Sim;
 
 namespace SimMach.Playground {
 
-
-    public struct BotIssue {
-        public readonly string Field;
-        public readonly object Expected;
-        public readonly object Actual;
-
-        public BotIssue(string field, object expected, object actual) {
-            Field = field;
-            Expected = expected;
-            Actual = actual;
-        }
-    }
-    
-    public interface IBot {
-        IList<BotIssue> Verify();
-        IEngine Engine(IEnv e);
-    }
-    
     public sealed class InventoryMoverBot : IBot {
 
         public int RingSize = 5;
@@ -43,7 +25,7 @@ namespace SimMach.Playground {
         }
 
 
-        public async Task Run(IEnv env) {
+        async Task Run(IEnv env) {
 
             _expectedCount = 0M;
             var endpoints = Machines.Select(m => new SimEndpoint(m, Port)).ToArray();

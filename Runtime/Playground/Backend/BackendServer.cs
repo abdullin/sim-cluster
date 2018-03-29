@@ -65,7 +65,7 @@ namespace SimMach.Playground.Backend {
                     var events = await _client.Read(position, int.MaxValue);
 
                     if (events.Count > 0) {
-                        _env.Debug($"Projecting {events.Count} events");
+                        //_env.Debug($"Projecting {events.Count} events");
                         foreach (var e in events) {
                             _proj.Dispatch(e);
                         }

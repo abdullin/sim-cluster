@@ -53,16 +53,17 @@ namespace SimMach.Playground {
             test.AddService("api2.public", InstallBackend("cl.internal"));
 
             var mover = new InventoryMoverBot("api1.public", "api2.public") {
-                RingSize = 5,
-                Iterations = 10,
+                RingSize = 7,
+                Iterations = 30,
                 Delay = 5.Sec(),
                 HaltOnCompletion = true
             };
             
             test.AddBot(mover);
             
-            var monkey = new ChaosMonkeyPlan {
-                ApplyToMachines = s => s.StartsWith("api")
+            var monkey = new GracefulChaosMonkey {
+                ApplyToMachines = s => s.StartsWith("api"),
+                DelayBetweenStrikes = r => r.Next(16,20).Sec()
             };
 
             test.Plan = monkey.Run;
