@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Runtime.InteropServices.ComTypes;
 using System.Threading.Tasks;
 using NUnit.Framework;
+using SimMach.Playground;
 
 namespace SimMach.Sim {
     public sealed class NetworkingTests {
@@ -190,6 +192,87 @@ namespace SimMach.Sim {
                     responses.Add(ex);
                 }
             });
+        }
+
+        [Test]
+        public void OutOfOrderPacketsAreFixed() {
+            var run = NewTestRuntime();
+            run.Connect("local", "api", 
+                NetworkProfile.LogAll,
+                NetworkProfile.ReverseLatency);
+
+
+            bool replied = false;
+            async Task Handle(IConn c) {
+                using (c) {
+                    await c.Read(5.Sec());
+                    await c.Write("World");
+                }
+            }
+            
+            run.AddScript("local", async e => {
+                using (var c = await e.Connect("api:443")) {
+                    await c.Write("Hello");
+                    await c.Read(5.Sec());
+                    replied = true;
+                }
+                e.Halt("DONE");
+            });
+            run.AddScript("api", async e => {
+                using (var s = await e.Bind(443)) {
+                    while (!e.Token.IsCancellationRequested) {
+                        Handle(await s.Accept());
+                    }
+                }
+            });
+            
+            run.Run();
+            
+            Assert.IsTrue(replied, nameof(replied));
+        }
+
+        [Test]
+        public void ParallelConnectionsToOneMachine() {
+            var run = NewTestRuntime();
+            run.Connect("local", "api", 
+                NetworkProfile.LogAll,
+                NetworkProfile.ReverseLatency);
+
+
+            async Task Connect(IEnv env) {
+                using (var c = await env.Connect("api:443")) {
+                    await c.Write("Hello");
+                    await c.Read(5.Sec());
+                }
+            };
+            
+            int connections = 0;
+
+            async Task Handle(IConn c) {
+                using (c) {
+                    connections++;
+                    await c.Read(5.Sec());
+                    await c.Write("World");
+                }
+            }
+
+            
+            
+            run.AddScript("local", async e => {
+                await Task.WhenAll(Connect(e), Connect(e));
+                e.Halt("DONE");
+            });
+            run.AddScript("api", async e => {
+                using (var s = await e.Bind(443)) {
+                    while (!e.Token.IsCancellationRequested) {
+                        Handle(await s.Accept());
+                    }
+                }
+            });
+            
+            run.Run();
+            
+            Assert.AreEqual(2, connections);
         }
 
         [Test]

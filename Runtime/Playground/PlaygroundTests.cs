@@ -69,9 +69,8 @@ namespace SimMach.Playground {
                 ApplyToMachines = s => s.StartsWith("api")
             };
 
-            //test.Plan = monkey.Run;
+            test.Plan = monkey.Run;
             return test;
-
         }
         
         

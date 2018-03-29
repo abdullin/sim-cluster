@@ -8,8 +8,6 @@ namespace SimMach.Playground {
 
         public Func<string, bool> ApplyToMachines = s => true; 
         
-        
-        
         public  async Task Run(SimControl plan) {
             plan.StartServices();
 
@@ -28,16 +26,16 @@ namespace SimMach.Playground {
                 var wipe = plan.Rand.Next(0, 3) == 1;
 
                 if (wipe) {
-                    plan.Debug($"KILL {candidate}");
+                    plan.Debug($"CHAOS MONKEY KILL {candidate}");
                     await plan.StopServices(s => s.Machine == candidate, grace: grace);
                     plan.WipeStorage(candidate);
                 } else {
-                    plan.Debug($"REBOOT {candidate}");
+                    plan.Debug($"CHAOS MONKEY REBOOT {candidate}");
                     await plan.StopServices(s => s.Machine == candidate, grace: grace);
                 }
 
                 await plan.Delay(plan.Rand.Next(2, 10).Sec());
-                plan.Debug($"START {candidate}");
+                plan.Debug($"CHAOS MONKEY START {candidate}");
                 plan.StartServices(s => s.Machine == candidate);
             }
         }

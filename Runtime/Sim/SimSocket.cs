@@ -48,33 +48,41 @@ namespace SimMach.Sim {
                 return;
             }
 
-            if (msg.Flag != SimFlag.Syn) {
-                Debug($"Drop non SYN: {msg.Body()}");
+            if (msg.Flag == SimFlag.Syn) {
+                AcceptNewConnection(msg);    
                 return;
             }
             
-            conn = new SimConn(this, msg.Source, _proc);
+            Debug($"Drop non SYN: {msg.BodyString()}");
+        }
+
+        void AcceptNewConnection(SimPacket msg) {
+            var conn = new SimConn(this, msg.Source, _proc, 0, msg.NextSeqNumber);
             _connections.Add(msg.Source, conn);
-            
+
             _proc.Schedule(async () => {
                 await conn.Write(null, SimFlag.Ack | SimFlag.Syn);
                 var resp = await conn.Read(5.Sec());
                 if (resp.Flag != SimFlag.Ack) {
-                    Debug("Non ACK packet received");
+                    Debug($"Non ACK packet: {msg.BodyString()}");
                     await conn.Write(null, SimFlag.Reset);
                     _connections.Remove(msg.Source);
                     return;
                 }
-                
-                var ready = new ClientConn(conn);
-            
-                if (_poll != null) {
-                    _poll.SetResult(ready);
-                    _poll = null;
-                } else {
-                    _incoming.Enqueue(ready);    
-                }
+
+                AddEstablishedConnection(conn);
             });
+        }
+
+        void AddEstablishedConnection(SimConn conn) {
+            var ready = new ClientConn(conn);
+
+            if (_poll != null) {
+                _poll.SetResult(ready);
+                _poll = null;
+            } else {
+                _incoming.Enqueue(ready);
+            }
         }
 
 

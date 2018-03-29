@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -63,6 +64,10 @@ namespace SimMach.Sim {
         public void Halt(string message, Exception error) {
             Debug(message);
             _machine.Runtime.Halt(message, error);
+        }
+
+        public void Error(string message, Exception error) {
+            Debug(message + ": " + error.Demystify().Message);
         }
 
         public LightningEnvironment GetDatabase(string name) {

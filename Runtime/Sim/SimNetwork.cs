@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -23,22 +24,31 @@ namespace SimMach.Sim {
         public readonly SimEndpoint Destination;
         
         public readonly object Payload;
-        public readonly int SeqNumber;
+        public readonly uint SeqNumber;
+        public readonly uint AckNumber;
         public readonly SimFlag Flag;
 
-        public SimPacket(SimEndpoint source, SimEndpoint destination, object payload, int seqNumber, SimFlag flag) {
+        public SimPacket(SimEndpoint source, SimEndpoint destination, object payload, 
+            uint seqNumber,
+            uint ackNumber,
+            SimFlag flag) {
             Source = source;
             Destination = destination;
             Payload = payload;
             SeqNumber = seqNumber;
+            AckNumber = ackNumber;
             Flag = flag;
         }
 
+        public uint NextSeqNumber => SeqNumber + 1;
+        
+        
+
         public override string ToString() {
-            return $"{Source}->{Destination}: {Body()}";
+            return $"{Source}->{Destination}: {BodyString()}";
         }
 
-        public string Body() {
+        public string BodyString() {
             var body = Payload == null ? "" : Payload.ToString();
             if (Flag != SimFlag.None) {
                 body += $" {Flag.ToString().ToUpperInvariant()}";
@@ -47,109 +57,7 @@ namespace SimMach.Sim {
             return body.Trim();
         }
     }
-    
-    public class SimConn  {
 
-        // maintain and send connection ID;
-        readonly SimSocket _socket;
-        public readonly SimEndpoint RemoteAddress;
-        readonly SimProc _proc;
-        int _sequence;
-        
-        SimFuture<SimPacket> _pendingRead;
-        
-
-        readonly Queue<SimPacket> _incoming = new Queue<SimPacket>();
-
-        public SimConn(SimSocket socket, SimEndpoint remoteAddress, SimProc proc) {
-            _socket = socket;
-            RemoteAddress = remoteAddress;
-            _proc = proc;
-        }
-
-        public async Task Write(object message, SimFlag flag = SimFlag.None) {
-            if (_closed) {
-                throw new IOException("Socket closed");
-            }
-            var packet = new SimPacket(_socket.Endpoint, RemoteAddress,  message, _sequence, flag);
-            _socket.SendMessage(packet);
-            _sequence++;
-        }
-
-
-        bool _closed;
-
-        bool NextIsFin() {
-            return _incoming.Count == 1 && _incoming.Peek().Flag == SimFlag.Fin;
-        }
-
-
-        void Close(string msg) {
-            //_socket.Debug($"Close: {msg}");
-            _closed = true;
-        }
-
-
-        public async Task<SimPacket> Read(TimeSpan timeout) {
-
-            if (_closed) {
-                throw new IOException("Socket closed");
-            }
-
-            if (_incoming.TryDequeue(out var tuple)) {
-
-                if (tuple.Flag == SimFlag.Reset) {
-                    Close("RESET");
-                    throw new IOException("Connection reset");
-                }
-
-                if (NextIsFin()) {
-                    Close("FIN");
-                }
-
-                return tuple;
-            }
-
-            _pendingRead = _proc.Promise<SimPacket>(timeout, _proc.Token);
-            
-            
-
-            var msg = await _pendingRead.Task;
-
-            if (msg.Flag == SimFlag.Reset) {
-                Close("RESET");
-                throw new IOException("Connection reset");
-            }
-            
-            if (NextIsFin()) {
-                Close("FIN");
-            }
-            
-            return msg;
-
-        }
-
-        public void Dispose() {
-            if (!_closed) {
-                Write(null, SimFlag.Fin);
-                Close("Dispose");
-            }
-            
-            
-
-            // drop socket on dispose
-        }
-
-        public void Deliver(SimPacket msg) {
-            if (_pendingRead != null) {
-                _pendingRead.SetResult(msg);
-                _pendingRead = null;
-            } else {
-                _incoming.Enqueue(msg);
-            }
-        }
-    }
-    
     sealed class ClientConn : IConn {
         public ClientConn(SimConn conn) {
             _conn = conn;
@@ -211,10 +119,12 @@ namespace SimMach.Sim {
         readonly TaskFactory _factory;
         readonly RouteDef _def;
 
-       void Debug(string l) {
-           if (_def.Debug)
-            _network.Debug($"  {_route.Full,-34} {l}");
-        }
+       void Debug(SimPacket msg, string l) {
+           if (_def.Debug(msg)) {
+               var route = $"{msg.Source}->{msg.Destination}";
+               _network.Debug($"  {route,-34} {l}");
+           }
+       }
 
         public SimRoute(SimScheduler scheduler, SimCluster network, RouteId route, RouteDef def) {
             _scheduler = scheduler;
@@ -225,7 +135,10 @@ namespace SimMach.Sim {
         }
 
         public Task Send(SimPacket msg) {
-            Debug($"Send {msg.Body()}");
+
+            
+         
+            Debug(msg, $"Send {msg.BodyString()}");
             // TODO: network cancellation
             _factory.StartNew(async () => {
                 // delivery wait
@@ -234,7 +147,7 @@ namespace SimMach.Sim {
                     await SimDelayTask.Delay(latency);
                     _network.InternalDeliver(msg);
                 } catch (Exception ex) {
-                    Debug($"FATAL: {ex}");
+                    Debug(msg, $"FATAL: {ex}");
                 }
             });
             return Task.FromResult(true);

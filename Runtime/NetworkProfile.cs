@@ -23,6 +23,33 @@ namespace SimMach.Playground {
             // for better latencies
             def.Latency = r => r.Next(100, 500).Ms();
         }
+
+        public static void ReverseLatency(RouteDef def) {
+            // from 50 to 10 and back
+            int latency = 50;
+            def.Latency = r => {
+                latency -= 2;
+                if (latency <= 10) {
+                    latency = 50;
+                }
+
+                return latency.Ms();
+            };
+        }
+
+
+        public static void LogAll(RouteDef d) {
+            d.Debug = packet => true;
+        }
+
+        public static Action<RouteDef> LogMachine(string message) {
+            
+            return def => {
+                def.Debug = packet => packet.Source.Machine == message || packet.Destination.Machine == message;
+            };
+        }
+        
+       
         
         /*
 

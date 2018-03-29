@@ -24,6 +24,6 @@ namespace SimMach {
 
     public class RouteDef {
         public Func<SimRandom,TimeSpan> Latency;
-        public bool Debug;
+        public Predicate<SimPacket> Debug = packet => false;
     }
 }

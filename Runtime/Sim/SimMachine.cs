@@ -69,7 +69,7 @@ namespace SimMach.Sim {
             _sockets.Add(socketId, clientSocket);
 
             
-            var conn = new SimConn(clientSocket, destination, process);
+            var conn = new SimConn(clientSocket, destination, process, 0, 0);
             
             clientSocket._connections.Add(destination, conn);
             

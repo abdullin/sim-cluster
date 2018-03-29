@@ -31,16 +31,21 @@ namespace SimMach {
 
         
         
-        public void Connect(string from, string to, Action<RouteDef> cfg = null) {
+        public void Connect(string from, string to, params Action<RouteDef>[] cfg) {
             Routes.Add(new RouteId(from, to), MakeRouteDef(cfg));
             Routes.Add(new RouteId(to, from), MakeRouteDef(cfg));
         }
 
-        static RouteDef MakeRouteDef(Action<RouteDef> cfg) {
+        static RouteDef MakeRouteDef(params Action<RouteDef>[] cfg) {
             var def = new RouteDef {
-                Latency = r => 50.Ms()
+                Latency = r => 50.Ms(),
+                Debug = packet => false,
             };
-            cfg?.Invoke(def);
+            foreach (var c in cfg) {
+                c(def);
+            }
+            
+            
             return def;
         }
     }

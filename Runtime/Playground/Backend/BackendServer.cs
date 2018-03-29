@@ -78,6 +78,8 @@ namespace SimMach.Playground.Backend {
                 } catch (TaskCanceledException) {
                     // nothing
                     return;
+                } catch (Exception ex) {
+                    _env.Error($"Projection error", ex);
                 }
             }
         }
@@ -113,7 +115,7 @@ namespace SimMach.Playground.Backend {
                             break;
                     }
                 } catch (Exception ex) {
-                    _env.Halt($"Error while processing {req}", ex);
+                    _env.Error($"Error while processing {req}", ex);
                 }
             }
         }

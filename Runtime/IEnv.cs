@@ -17,6 +17,7 @@ namespace SimMach {
         Task<ISocket> Bind(ushort port, TimeSpan timeout);
 
         void Halt(string message, Exception error = null);
+        void Error(string message, Exception error);
 
         LightningEnvironment GetDatabase(string name);
     }
