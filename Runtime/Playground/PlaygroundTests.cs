@@ -10,9 +10,8 @@ namespace SimMach.Playground {
     public sealed class PlaygroundTests {
 
 
-        [Test]
-        public void Playground() {
-            var test = new TestDef();
+        public static ScenarioDef InventoryMoverOverStableConnection() {
+            var test = new ScenarioDef();
             
             test.Connect("bot", "public");
             test.Connect("public", "internal");
@@ -28,26 +27,23 @@ namespace SimMach.Playground {
                 HaltOnCompletion = true
             };
             
-            test.AddScript("bot", bot.Run);
-            
-            test.Run(async plan => {
+            test.AddBot(bot);
+            test.Plan = async plan => {
                 plan.StartServices();
                 await plan.Delay(6.Sec());
                 plan.Debug("REIMAGE api1");
-                await plan.StopServices(s => s.Machine == "api1.public", grace:1.Sec());
+                await plan.StopServices(s => s.Machine == "api1.public", grace: 1.Sec());
                 plan.WipeStorage("api1");
                 await plan.Delay(2.Sec());
                 plan.Debug("START api1");
                 plan.StartServices(s => s.Machine == "api1.public");
-            });
-            
-            bot.Verify();
+            };
+            return test;
         }
 
 
-
-        public static TestDef InventoryMoverBotOver3GConnection() {
-            var test = new TestDef();
+        public static ScenarioDef InventoryMoverBotOver3GConnection() {
+            var test = new ScenarioDef();
             
             test.Connect("botnet", "public", NetworkProfile.Mobile3G);
             test.Connect("public", "internal", NetworkProfile.AzureIntranet);
@@ -77,10 +73,13 @@ namespace SimMach.Playground {
         
         [Test]
         public void InventoryMoverBotOver3GConnectionTest() {
-            Verify.NUnit(InventoryMoverBotOver3GConnection());
-            
+            InventoryMoverBotOver3GConnection().Assert();
         }
 
+        [Test]
+        public void InventoryMoverBotOverStableConnectionTest() {
+            InventoryMoverOverStableConnection().Assert();
+        }
 
         static Func<IEnv, IEngine> InstallBackend(string cl) {
             return env => {

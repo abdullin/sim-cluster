@@ -26,7 +26,6 @@ namespace SimMach
             foreach (var bot in test.Bots) {
                 foreach (var issue in bot.Verify()) {
                     Console.WriteLine($"  {bot.GetType().Name} expected {issue.Field} to be {issue.Expected} but got {issue.Actual}");
-                    
                 }
             }
 
