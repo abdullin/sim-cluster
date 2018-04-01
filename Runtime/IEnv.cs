@@ -8,6 +8,7 @@ using SimMach.Sim;
 namespace SimMach {
     public interface IEnv {
         void Debug(string starting);
+        
         CancellationToken Token { get; }
         Task Delay(TimeSpan i, CancellationToken token = default(CancellationToken));
         Task SimulateWork(TimeSpan ms, CancellationToken token = default(CancellationToken));
@@ -18,7 +19,7 @@ namespace SimMach {
 
         void Halt(string message, Exception error = null);
         void Error(string message, Exception error);
-
+        void Warning(string message);
         LightningEnvironment GetDatabase(string name);
     }
 

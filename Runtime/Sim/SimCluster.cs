@@ -38,8 +38,8 @@ namespace SimMach.Sim {
             return Machines.TryGetValue(name, out m);
         }
 
-        public void Debug(string message) {
-            Runtime.Debug(message);
+        public void Debug(LogType type, string message) {
+            Runtime.Debug(type, message);
         }
 
         public void SendPacket(SimPacket packet) {

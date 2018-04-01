@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -95,16 +96,40 @@ namespace SimMach.Sim {
         public SimRandom Rand = new SimRandom(0);
 
 
-        
 
-        public void Debug(string message) {
+
+        public void Debug(LogType type, string message) {
             _lastActivity = _time;
-            
-            if (true) {
-                var diff = _time - _lastDebug;
-                _lastDebug = _time;
-                Console.WriteLine("+ {0:0000} ms {1}", TimeSpan.FromTicks(diff).TotalMilliseconds, message);
+
+
+            var diff = _time - _lastDebug;
+            _lastDebug = _time;
+
+            string consoleColor;
+
+            switch (type) {
+                case LogType.RuntimeInfo:
+                    consoleColor = Cli.DarkBlue;
+                    break;
+                case LogType.Fault:
+                    consoleColor = Cli.Red;
+                    break;
+                case LogType.Error:
+                    consoleColor = Cli.Red;
+                    break;
+                case LogType.Info:
+                    consoleColor = Cli.Default;
+                    break;
+                case LogType.Warning:
+                    consoleColor = Cli.DarkYellow;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
+
+            Console.WriteLine(
+                $"{Cli.Gray}+ {TimeSpan.FromTicks(diff).TotalMilliseconds:0000} ms{Cli.Default} {consoleColor}{message}{Cli.Default}");
+
         }
 
         Exception _haltError;
@@ -123,7 +148,7 @@ namespace SimMach.Sim {
             var watch = Stopwatch.StartNew();
             var reason = "none";
             
-            Debug($"{"start".ToUpper()}");
+            Debug(LogType.RuntimeInfo,  $"{"start".ToUpper()}");
             Rand.Reinitialize(0);
 
             using (var cluster = new SimCluster(Def, this)) {
@@ -200,7 +225,7 @@ namespace SimMach.Sim {
                     reason = _haltMessage.ToUpper();
                 }
 
-                Debug($"{reason.ToUpper()} at {softTime}");
+                Debug(LogType.RuntimeInfo,  $"{reason.ToUpper()} at {softTime}");
 
                 if (_haltError != null) {
                     var demystify = _haltError.Demystify();

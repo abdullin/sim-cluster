@@ -47,8 +47,8 @@ namespace SimMach.Sim {
         }
 
 
-        public void Debug(string message) {
-            Runtime.Debug($"  {message}");
+        public void Debug(LogType type, string message) {
+            Runtime.Debug(type, $"  {message}");
         }
 
         public async Task<IConn> Connect(SimProc process, SimEndpoint destination) {
@@ -127,10 +127,10 @@ namespace SimMach.Sim {
             var folder = Path.Combine(Name, $"{service}_{name}");
             var localPath = Path.Combine(sim, folder);
             if (!Directory.Exists(localPath)) {
-                Debug($"Allocating folder {folder}");
+                Debug(LogType.RuntimeInfo, $"Allocating folder {folder}");
                 Directory.CreateDirectory(localPath);
             } else {
-                Debug($"Reusing folder {folder}");
+                Debug(LogType.RuntimeInfo, $"Reusing folder {folder}");
             }
             
 
@@ -142,7 +142,7 @@ namespace SimMach.Sim {
 
             var machinePath = Path.Combine(sim, Name);
             if (Directory.Exists(machinePath)) {
-                Debug($"ERASE STORAGE for machine {Name}");
+                Debug(LogType.Fault,  $"ERASE STORAGE for machine {Name}");
                 Directory.Delete(machinePath, true);
             }
           

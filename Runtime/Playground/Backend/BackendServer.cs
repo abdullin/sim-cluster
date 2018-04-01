@@ -79,7 +79,7 @@ namespace SimMach.Playground.Backend {
                     // nothing
                     return;
                 } catch (Exception ex) {
-                    _env.Error($"Projection error", ex);
+                    _env.Warning($"Projection error: {ex.Message}");
                 }
             }
         }

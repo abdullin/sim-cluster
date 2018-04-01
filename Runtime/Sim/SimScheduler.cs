@@ -25,7 +25,7 @@ namespace SimMach.Sim {
                 }
             } 
             catch (Exception ex) {
-                _runtime.Debug($"Failed executing {task} on {_name} {ex.Demystify()}");
+                _runtime.Debug(LogType.Warning, $"Failed executing {task} on {_name} {ex.Demystify()}");
             }
 
         }

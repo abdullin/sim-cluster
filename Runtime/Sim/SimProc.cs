@@ -62,12 +62,23 @@ namespace SimMach.Sim {
         }
 
         public void Halt(string message, Exception error) {
-            Debug(message);
+            DebugInner(LogType.Error, message);
             _machine.Runtime.Halt(message, error);
         }
 
         public void Error(string message, Exception error) {
-            Debug(message + ": " + error.Demystify().Message);
+            DebugInner(LogType.Error, message + ": " + error.Demystify().Message);
+        }
+        
+        
+        
+        public void Debug(string l) {
+            DebugInner(LogType.Info,l);
+        }
+        
+        
+        public void Warning(string l) {
+            DebugInner(LogType.Warning,l);
         }
 
         public LightningEnvironment GetDatabase(string name) {
@@ -79,8 +90,9 @@ namespace SimMach.Sim {
 
 
 
-        public void Debug(string l) {
-            _machine.Debug($"  {Id.Machine,-13} {l}");
+
+        void DebugInner(LogType logType, string l) {
+            _machine.Debug(logType, $"  {Id.Machine,-13} {l}");
         }
 
         readonly Dictionary<ushort, SimSocket> _sockets = new Dictionary<ushort, SimSocket>();

@@ -21,7 +21,7 @@ namespace SimMach.Playground {
 
             plan.Cluster.Routes.Select(p => p.Key);
             
-            plan.Debug($"Monkey has plans for {string.Join(", ", deathPool)}");
+            plan.Debug(LogType.RuntimeInfo,  $"Monkey has plans for {string.Join(", ", deathPool)}");
 
             while (true) {
                 await plan.Delay(DelayBetweenStrikes(plan.Rand));
@@ -31,16 +31,16 @@ namespace SimMach.Playground {
                 var wipe = plan.Rand.Next(0, 3) == 1;
 
                 if (wipe) {
-                    plan.Debug($"CHAOS MONKEY KILL {candidate}");
+                    plan.Debug(LogType.Fault,  $"CHAOS MONKEY KILL {candidate}");
                     await plan.StopServices(s => s.Machine == candidate, grace: grace);
                     plan.WipeStorage(candidate);
                 } else {
-                    plan.Debug($"CHAOS MONKEY REBOOT {candidate}");
+                    plan.Debug(LogType.Fault, $"CHAOS MONKEY REBOOT {candidate}");
                     await plan.StopServices(s => s.Machine == candidate, grace: grace);
                 }
 
                 await plan.Delay(plan.Rand.Next(2, 10).Sec());
-                plan.Debug($"CHAOS MONKEY START {candidate}");
+                plan.Debug(LogType.Fault, $"CHAOS MONKEY START {candidate}");
                 plan.StartServices(s => s.Machine == candidate);
             }
         }

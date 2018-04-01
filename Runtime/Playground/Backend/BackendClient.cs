@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using SimMach.Sim;
 
@@ -33,35 +35,70 @@ namespace SimMach.Playground.Backend {
             return resp.Count;
         }
 
-        async Task<TResponse> Unary<TRequest, TResponse>(TRequest req) {
+
+        IEnumerable<(int, TimeSpan, bool)> GetEndpoints() {
             var now = _env.Time;
+            var attempts = 4;
             for (int i = 0; i < _endpoints.Length; i++) {
                 var endpoint = _endpoints[i];
                 if (_outages[i] > now) {
                     continue;
                 }
-                _env.Debug($"Send '{req}' to {endpoint}");
+                
+                
 
-                try {
-                    using (var conn = await _env.Connect(endpoint)) {
-                        await conn.Write(req);
-                        var res = await conn.Read(5.Sec());
-
-                        if (res is ArgumentException ex) {
-                            throw new ArgumentException(ex.Message);
-                        }
-                        
-                        return (TResponse) res;
-                    }
-                } catch (IOException ex) {
-                    if (_outages[i] > now) {
-                        _env.Debug($"! {ex.Message} for '{req}'. {endpoint} already DOWN");
-                    } else {
-                        _env.Debug($"! {ex.Message} for '{req}'. {endpoint} DOWN");
-                        _outages[i] = now + _downtime;
-                    }
-                }
+                yield return (i, TimeSpan.Zero, false);
+                yield return (i, TimeSpan.Zero, true);
             }
+            
+
+
+        } 
+            
+            
+         async Task<TResponse> Unary<TRequest, TResponse>(TRequest req) {
+            var now = _env.Time;
+
+             foreach (var (i, ts, mark) in GetEndpoints()) {
+                 var endpoint = _endpoints[i];
+                 
+                 _env.Debug($"Send '{req}' to {endpoint}");
+
+                 if (ts != TimeSpan.Zero) {
+                     await _env.Delay(ts, _env.Token);
+                 }
+
+                 try {
+                     using (var conn = await _env.Connect(endpoint)) {
+                         await conn.Write(req);
+                         var res = await conn.Read(5.Sec());
+
+                         if (res is ArgumentException ex) {
+                             throw new ArgumentException(ex.Message);
+                         }
+                        
+                         return (TResponse) res;
+                     }
+                 } catch (IOException ex) {
+                     if (!mark) {
+                         _env.Warning($"! {ex.Message} for '{req}'. Retrying {endpoint}");
+                         continue;
+                     }
+                     
+                     
+                     if (_outages[i] > now) {
+                         _env.Warning($"! {ex.Message} for '{req}'. {endpoint} already DOWN");
+                     } else {
+                         _env.Warning($"! {ex.Message} for '{req}'. {endpoint} DOWN");
+                         _outages[i] = now + _downtime;
+                     }
+                 }
+                 
+             }
+            
+            // we've exhausted all gateways.
+            
+            
             throw new IOException("No gateways active");
         }
     }

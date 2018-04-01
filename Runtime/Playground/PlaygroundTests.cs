@@ -31,11 +31,11 @@ namespace SimMach.Playground {
             test.Plan = async plan => {
                 plan.StartServices();
                 await plan.Delay(6.Sec());
-                plan.Debug("REIMAGE api1");
+                plan.Debug(LogType.Fault,  "REIMAGE api1");
                 await plan.StopServices(s => s.Machine == "api1.public", grace: 1.Sec());
                 plan.WipeStorage("api1");
                 await plan.Delay(2.Sec());
-                plan.Debug("START api1");
+                plan.Debug(LogType.Fault,  "START api1");
                 plan.StartServices(s => s.Machine == "api1.public");
             };
             return test;
@@ -51,13 +51,13 @@ namespace SimMach.Playground {
             test.AddService("cl.internal", InstallCommitLog);
             test.AddService("api1.public", InstallBackend("cl.internal"));
             test.AddService("api2.public", InstallBackend("cl.internal"));
-            test.AddService("api3.public", InstallBackend("cl.internal"));
+            
 
             var mover = new InventoryMoverBot {
-                Servers = new []{"api1.public", "api2.public", "api3.public"},
+                Servers = new []{"api1.public", "api2.public"},
                 RingSize = 7,
                 Iterations = 30,
-                Delay = 5.Sec(),
+                Delay = 4.Sec(),
                 HaltOnCompletion = true
             };
             

@@ -9,10 +9,10 @@ namespace SimMach.Sim {
         readonly TaskFactory _factory;
         readonly RouteDef _def;
 
-        void Debug(SimPacket msg, string l, bool force= false) {
+        void Debug(LogType type, SimPacket msg,  string l, bool force= false) {
             if (force || _def.Debug(msg)) {
                 var route = $"{msg.Source}->{msg.Destination}";
-                _network.Debug($"  {route,-34} {l}");
+                _network.Debug(type, $"  {route,-34} {l}");
             }
         }
 
@@ -32,11 +32,11 @@ namespace SimMach.Sim {
             
 
             if (_def.PacketLoss != null && _def.PacketLoss(_network.Rand)) {
-                    Debug(msg, $"LOST {msg.BodyString()}", _def.LogFaults);
+                    Debug(LogType.Fault,  msg, $"LOST {msg.BodyString()}", _def.LogFaults);
                 // we just lost a packet.
                 return Task.FromResult(true);
             }
-            Debug(msg, $"Send {msg.BodyString()}");
+            Debug(LogType.Info, msg, $"Send {msg.BodyString()}");
             
             // TODO: network cancellation
             _factory.StartNew(async () => {
@@ -46,7 +46,7 @@ namespace SimMach.Sim {
                     await SimDelayTask.Delay(latency);
                     _network.InternalDeliver(msg);
                 } catch (Exception ex) {
-                    Debug(msg, $"FATAL: {ex}");
+                    Debug(LogType.Error,  msg, $"FATAL: {ex}");
                 }
             });
             return Task.FromResult(true);

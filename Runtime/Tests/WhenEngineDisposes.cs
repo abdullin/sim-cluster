@@ -98,7 +98,7 @@ namespace SimMach.Sim {
             test.Run(async e => {
                 e.StartServices();
                 await e.Delay(5.Sec());
-                e.Debug("Start shutting down");
+                e.Debug(LogType.Info,  "Start shutting down");
                 await e.StopServices(grace: 2.Sec());
             });
             Assert.IsTrue(disposeStart, nameof(disposeStart));

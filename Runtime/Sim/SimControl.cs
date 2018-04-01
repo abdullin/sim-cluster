@@ -31,8 +31,8 @@ namespace SimMach.Sim {
             }
         }
 
-        public void Debug(string message) {
-            _runtime.Debug(message);
+        public void Debug(LogType type, string message) {
+            _runtime.Debug(type, message);
         }
 
         public Task Delay(TimeSpan i, CancellationToken token = default (CancellationToken)) {
