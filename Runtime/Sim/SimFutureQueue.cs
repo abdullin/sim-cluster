@@ -21,6 +21,8 @@ namespace SimMach.Sim {
 
 
         public const int Never = -1;
+
+        public int JumpCount => _jumps.Count;
         
         public void Schedule(SimScheduler id, long pos, object message) {
 
@@ -65,15 +67,16 @@ namespace SimMach.Sim {
                     // we are about to jump to the next time point
 
                     // check if there are any future tasks
-                    var jumps = _jumps
-                        .Where(p => p.Key.FutureIsNow)
-                        .ToList();
-
-                    // no, move forward
-                    if (jumps.Count == 0) {
+                    
+                    if (!_jumps.Any(p => p.Key.FutureIsNow)) {
+                        // no, move forward
                         _future.RemoveAt(0);
                         continue;
                     }
+                    
+                    var jumps = _jumps
+                        .Where(p => p.Key.FutureIsNow)
+                        .ToList();
 
                     // order by ID to have some order
                     foreach (var (jump, (sched, pos)) in jumps.OrderBy(p => p.Key.Id)) {
@@ -84,10 +87,8 @@ namespace SimMach.Sim {
                         // remove from the future unless it is present
                         if (pos != time && pos != -1) {
                             if (_future.TryGetValue(pos, out var removal)) {
-                                var removed = removal.RemoveAll(tuple => tuple.Item2 == jump);
-                                if (removed == 0) {
-                                    throw new InvalidOperationException($"Didn't find jump at pos {pos}");
-                                }    
+                                removal.RemoveAll(tuple => tuple.Item2 == jump);
+                                // future could be missing due to erasure
                             }
                             
                         }
@@ -99,6 +100,10 @@ namespace SimMach.Sim {
                 var (scheduler, subject) = list.First();
                 list.RemoveAt(0);
                 item = new FutureItem(time, scheduler, subject);
+                if (subject is IFutureJump fj) {
+                    _jumps.Remove(fj);
+                }
+                
                 return true;
             }
         }
