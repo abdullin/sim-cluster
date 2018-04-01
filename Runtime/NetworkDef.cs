@@ -26,6 +26,7 @@ namespace SimMach {
         public Func<SimRandom,TimeSpan> Latency;
         public Func<SimRandom, bool> PacketLoss;
         public Predicate<SimPacket> Debug = packet => false;
-        
+        public bool LogFaults;
+
     }
 }

@@ -51,8 +51,10 @@ namespace SimMach.Playground {
             test.AddService("cl.internal", InstallCommitLog);
             test.AddService("api1.public", InstallBackend("cl.internal"));
             test.AddService("api2.public", InstallBackend("cl.internal"));
+            test.AddService("api3.public", InstallBackend("cl.internal"));
 
-            var mover = new InventoryMoverBot("api1.public", "api2.public") {
+            var mover = new InventoryMoverBot {
+                Servers = new []{"api1.public", "api2.public", "api3.public"},
                 RingSize = 7,
                 Iterations = 30,
                 Delay = 5.Sec(),

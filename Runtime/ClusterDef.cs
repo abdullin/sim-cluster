@@ -40,6 +40,7 @@ namespace SimMach {
             var def = new RouteDef {
                 Latency = r => 50.Ms(),
                 Debug = packet => false,
+                LogFaults = true,
             };
             foreach (var c in cfg) {
                 c(def);

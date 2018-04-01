@@ -11,7 +11,7 @@ namespace SimMach.Playground {
     public sealed class InventoryMoverBot : IBot {
 
         public int RingSize = 5;
-        readonly string[] _machines;
+        public string[] Servers;
         public int Iterations = 5;
         public TimeSpan Delay = 1.Sec();
         public bool HaltOnCompletion = false;
@@ -20,15 +20,15 @@ namespace SimMach.Playground {
         decimal _actualCount;
         decimal _expectedCount;
 
-        public InventoryMoverBot(params string[] machines) {
-            _machines = machines;
+        public InventoryMoverBot(params string[] servers) {
+            Servers = servers;
         }
 
 
         async Task Run(IEnv env) {
 
             _expectedCount = 0M;
-            var endpoints = _machines.Select(m => new SimEndpoint(m, Port)).ToArray();
+            var endpoints = Servers.Select(m => new SimEndpoint(m, Port)).ToArray();
             
             var lib = new BackendClient(env, endpoints);
         
