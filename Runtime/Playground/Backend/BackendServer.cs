@@ -124,7 +124,7 @@ namespace SimMach.Playground.Backend {
             var wasFrom = _store.GetItemQuantity(moveItemRequest.FromItemID);
             var wasTo = _store.GetItemQuantity(moveItemRequest.ToItemID);
             if (wasFrom < moveItemRequest.Amount) {
-                await conn.Write(new ArgumentException("Insufficient"));
+                await conn.Write(new ArgumentException("Insufficient amount"));
                 return;
             }
 

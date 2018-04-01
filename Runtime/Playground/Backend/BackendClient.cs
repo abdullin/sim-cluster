@@ -46,6 +46,11 @@ namespace SimMach.Playground.Backend {
                     using (var conn = await _env.Connect(endpoint)) {
                         await conn.Write(req);
                         var res = await conn.Read(5.Sec());
+
+                        if (res is ArgumentException ex) {
+                            throw new ArgumentException(ex.Message);
+                        }
+                        
                         return (TResponse) res;
                     }
                 } catch (IOException ex) {

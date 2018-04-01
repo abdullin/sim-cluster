@@ -35,13 +35,19 @@ namespace SimMach.Playground {
             await lib.AddItem(0, 1);
 
             _expectedCount = 1M;
-                
-            for (int i = 0; i < Iterations; i++) {
-                var curr = i % RingSize;
-                var next = (i + 1) % RingSize;
-                await lib.MoveItem(curr, next, 1);
-                await env.Delay(Delay);
+
+            try {
+
+                for (int i = 0; i < Iterations; i++) {
+                    var curr = i % RingSize;
+                    var next = (i + 1) % RingSize;
+                    await lib.MoveItem(curr, next, 1);
+                    await env.Delay(Delay);
+                }
+            } catch (ArgumentException ex) {
+                env.Error("Server invariant violated", ex);
             }
+
             _actualCount = await lib.Count();
             if (HaltOnCompletion) {
                 env.Halt("DONE");

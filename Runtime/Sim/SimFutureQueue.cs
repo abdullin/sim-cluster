@@ -83,10 +83,14 @@ namespace SimMach.Sim {
                         _jumps.Remove(jump);
                         // remove from the future unless it is present
                         if (pos != time && pos != -1) {
-                            var removed = _future[pos].RemoveAll(tuple => tuple.Item2 == jump);
-                            if (removed == 0) {
-                                throw new InvalidOperationException($"Didn't find jump at pos {pos}");
-                            }
+                            if (_future.TryGetValue(pos, out var removal)) {
+                            
+                                var removed = removal.RemoveAll(tuple => tuple.Item2 == jump);
+                                if (removed == 0) {
+                                    throw new InvalidOperationException($"Didn't find jump at pos {pos}");
+                                }    
+                            } 
+                            
                         }
 
                     }
