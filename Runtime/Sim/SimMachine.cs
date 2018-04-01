@@ -62,31 +62,36 @@ namespace SimMach.Sim {
             // todo: allow Azure SNAT delay scenario
             var socketId = NextSocketID();
             var source = new SimEndpoint(Name, socketId);
-            
-            
-
             var clientSocket = new SimSocket(process, source, Cluster);
-            _sockets.Add(socketId, clientSocket);
 
-            
-            var conn = new SimConn(clientSocket, destination, process, 0, 0);
-            
-            clientSocket._connections.Add(destination, conn);
-            
-            
-            // handshake
-            await conn.Write(null, SimFlag.Syn);
-            
-            var response = await conn.Read(5.Sec());
-            if (response.Flag != (SimFlag.Ack | SimFlag.Syn)) {
-                await conn.Write(null, SimFlag.Reset);
-                clientSocket._connections.Remove(destination);
-                throw new IOException("Failed to connect");
+            try {
+                _sockets.Add(socketId, clientSocket);
 
+
+                var conn = new SimConn(clientSocket, destination, process, 0, 0);
+
+                clientSocket._connections.Add(destination, conn);
+
+
+                // handshake
+                await conn.Write(null, SimFlag.Syn);
+
+                var response = await conn.Read(5.Sec());
+                if (response.Flag != (SimFlag.Ack | SimFlag.Syn)) {
+                    await conn.Write(null, SimFlag.Reset);
+                    clientSocket._connections.Remove(destination);
+                    throw new IOException("Failed to connect");
+
+                }
+
+                await conn.Write(null, SimFlag.Ack);
+
+                return new ClientConn(conn);
+            } catch (Exception ex) {
+                _sockets.Remove(socketId);
+                clientSocket.Dispose();
+                throw new IOException("Failed to connect", ex);
             }
-            await conn.Write(null, SimFlag.Ack);
-            
-            return new ClientConn(conn);
         }
         
         public async Task<ISocket> Bind(SimProc proc, ushort port, TimeSpan timeout) {

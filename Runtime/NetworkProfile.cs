@@ -22,7 +22,7 @@ namespace SimMach.Playground {
             // TODO: use Zigorat or Box Muller transform
             // for better latencies
             def.Latency = r => r.Next(100, 500).Ms();
-            def.PacketLoss = r => r.Next(0, 100) < 10;
+            def.PacketLoss = r => r.Next(0, 100) <= 2;
         }
 
         public static void ReverseLatency(RouteDef def) {

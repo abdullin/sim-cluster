@@ -12,7 +12,6 @@ namespace SimMach.Sim {
         Task _task;
         SimProc _proc;
         
-        
         readonly SimScheduler _scheduler;
         readonly TaskFactory _factory;
         readonly SimMachine _machine;
@@ -74,7 +73,6 @@ namespace SimMach.Sim {
             ReleaseResources();
         }
 
-
         public void ReleaseResources() {
             if (_proc != null) {
                 _proc.Dispose();
@@ -82,7 +80,6 @@ namespace SimMach.Sim {
             }
 
             _task = null;
-
         }
     }
 }

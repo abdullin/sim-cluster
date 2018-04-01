@@ -204,7 +204,7 @@ namespace SimMach.Sim {
 
                 if (_haltError != null) {
                     var demystify = _haltError.Demystify();
-                    Console.WriteLine(demystify.Message);
+                    Console.WriteLine(demystify.GetType().Name + ": " + demystify.Message);
                     Console.WriteLine(demystify.StackTrace);
                 }
 

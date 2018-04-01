@@ -15,8 +15,9 @@ namespace SimMach.Sim {
         SimFuture<SimPacket> _pendingRead;
         
 
-        readonly Queue<SimPacket> _incoming = new Queue<SimPacket>();
+        readonly Queue<SimPacket> _readBuffer = new Queue<SimPacket>();
         readonly SortedList<uint, SimPacket> _outOfOrder = new SortedList<uint, SimPacket>();
+        
 
         public SimConn(SimSocket socket, SimEndpoint remoteAddress, SimProc proc, uint seq, uint ackNumber) {
             _socket = socket;
@@ -40,7 +41,7 @@ namespace SimMach.Sim {
         bool _closed;
 
         bool NextIsFin() {
-            return _incoming.Count == 1 && _incoming.Peek().Flag == SimFlag.Fin;
+            return _readBuffer.Count == 1 && _readBuffer.Peek().Flag == SimFlag.Fin;
         }
 
 
@@ -56,7 +57,7 @@ namespace SimMach.Sim {
                 throw new IOException("Socket closed");
             }
 
-            if (_incoming.TryDequeue(out var tuple)) {
+            if (_readBuffer.TryDequeue(out var tuple)) {
 
                 if (tuple.Flag == SimFlag.Reset) {
                     Close("RESET");
@@ -123,7 +124,7 @@ namespace SimMach.Sim {
                 _pendingRead.SetResult(msg);
                 _pendingRead = null;
             } else {
-                _incoming.Enqueue(msg);
+                _readBuffer.Enqueue(msg);
             }
         }
     }
