@@ -33,7 +33,7 @@ namespace SimMach.Sim {
             return _procId++;
         }
 
-        public ushort NextSocketID() {
+        ushort NextSocketID() {
             for (ushort i = 10000; i < ushort.MaxValue; i++) {
                 if (!_sockets.ContainsKey(i)) {
                     return i;

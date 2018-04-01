@@ -7,8 +7,8 @@ namespace SimMach.Sim {
     public sealed class SimRandom
     {
         // The +1 ensures NextDouble doesn't generate 1.0
-        const double REAL_UNIT_INT = 1.0 / ((double)int.MaxValue + 1.0);
-        const double REAL_UNIT_UINT = 1.0 / ((double)uint.MaxValue + 1.0);
+        const double REAL_UNIT_INT = 1.0 / (int.MaxValue + 1.0);
+        const double REAL_UNIT_UINT = 1.0 / (uint.MaxValue + 1.0);
         const uint Y = 842502087, Z = 3579807591, W = 273326509;
         uint x, y, z, w;
 
