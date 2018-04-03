@@ -46,16 +46,17 @@ scenario that is then executed.
 
 A scenario could look like this:
 
-```
+```csharp
 public static ScenarioDef InventoryMoverBotOver3GConnection() {
     var test = new ScenarioDef();
-    
+    // define network connections and provide network profiles for them
     test.Connect("botnet", "public", NetworkProfile.Mobile3G);
     test.Connect("public", "internal", NetworkProfile.AzureIntranet);
+    // install services on the machines
     test.AddService("cl.internal", InstallCommitLog);
     test.AddService("api1.public", InstallBackend("cl.internal"));
     test.AddService("api2.public", InstallBackend("cl.internal"));
-    
+    // configure a bot that will create workload and verify results 
     var mover = new InventoryMoverBot {
         Servers = new []{"api1.public", "api2.public"},
         RingSize = 7,
@@ -66,6 +67,8 @@ public static ScenarioDef InventoryMoverBotOver3GConnection() {
     
     test.AddBot(mover);
     
+    // define a plan for the simulation (who will control the machines)
+    // this is optional, but a chaos monkey is cute...
     var monkey = new GracefulChaosMonkey {
         ApplyToMachines = s => s.StartsWith("api"),
         DelayBetweenStrikes = r => r.Next(5,10).Sec()
@@ -74,3 +77,25 @@ public static ScenarioDef InventoryMoverBotOver3GConnection() {
     return test;
 }
 ```
+
+Installer functions simply bring together the necessary
+dependencies and return an instance of `IEngine`:
+
+```csharp
+static Func<IEnv, IEngine> InstallBackend(string cl) {
+    return env => {
+        var client = new CommitLogClient(env, cl + ":443");
+        return new BackendServer(env, 443, client);
+    };
+}
+static IEngine InstallCommitLog(IEnv env) {
+    return new CommitLogServer(env, 443);
+}
+```
+
+`BackendServer` is a simplistic event-driven server that has its own
+projection thread and a (command) request handler. It commits data to
+the `CommitLog` from which other server instances could get the same
+data.
+
+
