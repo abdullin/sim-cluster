@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,8 +23,6 @@ namespace SimMach.Sim {
         public Task StopServices(Predicate<ServiceId> selector = null, TimeSpan? grace = null) {
             return Cluster.StopServices(selector, grace);
         }
-        
-        
 
         public void WipeStorage(string machine) {
             if (Cluster.ResolveHost(machine, out var simMachine)) {

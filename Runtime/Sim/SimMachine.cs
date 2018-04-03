@@ -28,17 +28,25 @@ namespace SimMach.Sim {
         }
 
         int _procId;
+        ushort _socketSeq = 10000;
 
         public int NextProcID() {
             return _procId++;
         }
 
         ushort NextSocketID() {
-            for (ushort i = 10000; i < ushort.MaxValue; i++) {
-                if (!_sockets.ContainsKey(i)) {
-                    return i;
+            // we neet to issue next free socket id efficiently
+            for (ushort i = 0; i < ushort.MaxValue; i++) {
+                _socketSeq++;
+                if (_socketSeq <= 10000) {
+                    _socketSeq = 10000;
                 }
+                if (!_sockets.ContainsKey(_socketSeq)) {
+                    return _socketSeq;
+                }
+                
             }
+            
             throw new IOException("No free sockets");
         }
 
@@ -78,19 +86,24 @@ namespace SimMach.Sim {
 
                 var response = await conn.Read(5.Sec());
                 if (response.Flag != (SimFlag.Ack | SimFlag.Syn)) {
+                    Debug(LogType.Warning, $"Bad handshake: {response.BodyString()}");
                     await conn.Write(null, SimFlag.Reset);
                     clientSocket._connections.Remove(destination);
-                    throw new IOException("Failed to connect");
+                    throw new IOException($"Failed to connect (got {response.BodyString()})");
 
                 }
 
                 await conn.Write(null, SimFlag.Ack);
 
                 return new ClientConn(conn);
-            } catch (Exception ex) {
+
+            } catch (IOException) {
+                throw;
+            }
+            catch (Exception ex) {
                 _sockets.Remove(socketId);
                 clientSocket.Dispose();
-                throw new IOException("Failed to connect", ex);
+                throw new IOException($"Failed to connect: {ex.Message}", ex);
             }
         }
         

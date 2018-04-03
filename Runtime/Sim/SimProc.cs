@@ -12,7 +12,7 @@ namespace SimMach.Sim {
         readonly int _procId;
         readonly TaskFactory _scheduler;
         public readonly ServiceId Id;
-        readonly SimMachine _machine;
+        public readonly SimMachine Machine;
 
         readonly Stack<IDisposable> _simulationResources = new Stack<IDisposable>();
 
@@ -37,7 +37,7 @@ namespace SimMach.Sim {
         public SimProc(ServiceId id, SimMachine machine, int procId, TaskFactory scheduler) {
             _cts = new CancellationTokenSource();
             Id = id;
-            _machine = machine;
+            Machine = machine;
             _procId = procId;
             _scheduler = scheduler;
         }
@@ -51,19 +51,19 @@ namespace SimMach.Sim {
             _cts.Cancel();
         }
 
-        public TimeSpan Time => _machine.Time;
+        public TimeSpan Time => Machine.Time;
 
         public async Task<IConn> Connect(SimEndpoint endpoint) {
-            return await _machine.Connect(this, endpoint);
+            return await Machine.Connect(this, endpoint);
         }
 
         public async Task<ISocket> Bind(ushort port, TimeSpan timeout) {
-            return await _machine.Bind(this, port, timeout);
+            return await Machine.Bind(this, port, timeout);
         }
 
         public void Halt(string message, Exception error) {
             DebugInner(LogType.Error, message);
-            _machine.Runtime.Halt(message, error);
+            Machine.Runtime.Halt(message, error);
         }
 
         public void Error(string message, Exception error) {
@@ -82,7 +82,7 @@ namespace SimMach.Sim {
         }
 
         public LightningEnvironment GetDatabase(string name) {
-            var folder = _machine.GetServiceFolder(Id.Service, name);
+            var folder = Machine.GetServiceFolder(Id.Service, name);
             var db = new LightningEnvironment(folder);
             _simulationResources.Push(db);
             return db;
@@ -92,7 +92,7 @@ namespace SimMach.Sim {
 
 
         void DebugInner(LogType logType, string l) {
-            _machine.Debug(logType, $"  {Id.Machine,-13} {l}");
+            Machine.Debug(logType, $"  {Id.Machine,-13} {l}");
         }
 
         readonly Dictionary<ushort, SimSocket> _sockets = new Dictionary<ushort, SimSocket>();
@@ -102,13 +102,13 @@ namespace SimMach.Sim {
         }
 
         public void ReleaseSocket(ushort port) {
-            _machine.ReleaseSocket(port);
+            Machine.ReleaseSocket(port);
             _sockets.Remove(port);
         }
 
         public void Dispose() {
             foreach (var (port,_) in _sockets) {
-                _machine.ReleaseSocket(port);
+                Machine.ReleaseSocket(port);
             }
             _sockets.Clear();
 

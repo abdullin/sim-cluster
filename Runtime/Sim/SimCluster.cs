@@ -58,8 +58,8 @@ namespace SimMach.Sim {
 
             var back = new SimPacket(msg.Destination, msg.Source,
                 new IOException("Connection refused"),
-                0,
-                0,
+                msg.AckNumber,
+                msg.NextSeqNumber,
                 SimFlag.Reset
             );
 

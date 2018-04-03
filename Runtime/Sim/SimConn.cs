@@ -46,6 +46,7 @@ namespace SimMach.Sim {
 
 
         void Close(string msg) {
+            //_socket.Dispose();
             //_socket.Debug($"Close: {msg}");
             _closed = true;
         }
@@ -104,7 +105,14 @@ namespace SimMach.Sim {
         public void Deliver(SimPacket msg) {
             if (msg.SeqNumber != _ackNumber) {
                 //_socket.Debug($"Out-of-order packet {msg.BodyString()} from {msg.Source} with Seq {msg.SeqNumber}. Ours {_ackNumber}");
+                
+
+                if (_outOfOrder.ContainsKey(msg.SeqNumber)) {
+                    _proc.Machine.Runtime.Halt($"Duplicate packet for {RemoteAddress}->{_socket.Endpoint}", new ArgumentException($"{_ackNumber} has '{_outOfOrder[msg.SeqNumber].BodyString()}' trying to put {msg.SeqNumber} '{msg.BodyString()}'"));
+                    return;
+                }
                 _outOfOrder.Add(msg.SeqNumber, msg);
+                
                 return;
             }
 
