@@ -65,7 +65,7 @@ namespace SimMach.Playground {
             
             var monkey = new GracefulChaosMonkey {
                 ApplyToMachines = s => s.StartsWith("api"),
-                DelayBetweenStrikes = r => r.Next(16,20).Sec()
+                DelayBetweenStrikes = r => r.Next(5,10).Sec()
             };
 
             test.Plan = monkey.Run;

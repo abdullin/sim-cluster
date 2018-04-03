@@ -12,6 +12,7 @@ namespace SimMach.Playground {
 
         public static void AzureIntranet(RouteDef obj) {
             obj.Latency = r => r.Next(2, 10).Ms();
+            obj.PacketLoss = r => r.Next(0, 10000) == 1;
         }
 
         public static void IdealFixed(RouteDef def) {

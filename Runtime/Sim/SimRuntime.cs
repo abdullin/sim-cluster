@@ -53,7 +53,13 @@ namespace SimMach.Sim {
                 return _folder;
             }
 
-            var folder = Path.Combine("/Volumes/SimDisk", "sim", DateTime.UtcNow.ToString("yy-MM-dd-HH-mm-ss"));
+            // HINT: create a memory disk here
+            var root = "/Volumes/SimDisk";
+            if (!Directory.Exists(root)) {
+                root = Path.GetTempPath();
+            }
+
+            var folder = Path.Combine(root, "sim", DateTime.UtcNow.ToString("yy-MM-dd-HH-mm-ss"));
             _folder = folder;
             return folder;
         }

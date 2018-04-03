@@ -36,15 +36,15 @@ namespace SimMach.Playground {
 
             _expectedCount = 1M;
 
-            try {
-                for (int i = 0; i < Iterations; i++) {
+            for (int i = 0; i < Iterations; i++) {
+                try {
                     var curr = i % RingSize;
                     var next = (i + 1) % RingSize;
                     await lib.MoveItem(curr, next, 1);
                     await env.Delay(Delay);
+                } catch (ArgumentException ex) {
+                    env.Error("Unexpected error", ex);
                 }
-            } catch (ArgumentException ex) {
-                env.Error("Server invariant violated", ex);
             }
 
             _actualCount = await lib.Count();
