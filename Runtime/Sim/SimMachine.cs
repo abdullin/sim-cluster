@@ -30,6 +30,8 @@ namespace SimMach.Sim {
         int _procId;
         ushort _socketSeq = 10000;
 
+        public int SocketCount => _sockets.Count;
+
         public int NextProcID() {
             return _procId++;
         }

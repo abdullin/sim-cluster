@@ -9,13 +9,11 @@ using System.Threading.Tasks;
 using SimMach.Playground;
 using SimMach.Sim;
 
-namespace SimMach
-{
+namespace SimMach {
 
    
     class Program {
         static void Main(string[] args) {
-
             var test = PlaygroundTests.InventoryMoverBotOver3GConnection();
 
             test.Run();
@@ -28,11 +26,7 @@ namespace SimMach
                     Console.WriteLine($"  {bot.GetType().Name} expected {issue.Field} to be {issue.Expected} but got {issue.Actual}");
                 }
             }
-
             Console.ForegroundColor = old;
-
         }
-
-        
     }
 }

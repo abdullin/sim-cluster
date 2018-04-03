@@ -235,7 +235,9 @@ namespace SimMach.Sim {
 
                 Console.WriteLine($"Simulated {Moment.Print(softTime)} in {_steps} steps.");
                 Console.WriteLine($"Took {Moment.Print(watch.Elapsed)} of real time (x{factor:F0} speed-up)");
-                Console.WriteLine($"{FutureQueue.JumpCount} jumps left");
+                // statistics
+                
+                Console.WriteLine($"Stats: {FutureQueue.JumpCount} jumps, {cluster.Machines.Sum(m => m.Value.SocketCount)} sockets");
 
             }
 
