@@ -78,8 +78,8 @@ public static ScenarioDef InventoryMoverBotOver3GConnection() {
 }
 ```
 
-Installer functions simply bring together the necessary
-dependencies and return an instance of `IEngine`:
+Installer functions bring together the necessary dependencies and
+return an instance of `IEngine`:
 
 ```csharp
 static Func<IEnv, IEngine> InstallBackend(string cl) {
@@ -97,5 +97,21 @@ static IEngine InstallCommitLog(IEnv env) {
 projection thread and a (command) request handler. It commits data to
 the `CommitLog` from which other server instances could get the same
 data.
+
+In theory, the same business logic should be able to run in the real
+world environment as well. I didn't get to that part, yet.
+
+
+# Licenses
+
+This project is licensed under MIT license and uses:
+
+* Portions of code from
+  [FDB .NET Client](https://github.com/Doxense/foundationdb-dotnet-client)
+  under 3-clause BSD to store data in LMDB;
+* Random function from
+  [GeneticSharp](https://github.com/giacomelli/GeneticSharp) under MIT.
+
+
 
 
