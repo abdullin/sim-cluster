@@ -6,11 +6,19 @@ distributed systems inside [discrete event simulation](https://en.wikipedia.org/
 ## Try it out
 
 This is a .NET Core 2.0. You should be able to open it in a IDE
-(e.g. in JetBrains Rider) and run `SimMach` project.
+(e.g. in JetBrains Rider) and run `Runtime/SimMach.csproj` project.
 
 The output should be something like this:
 
 ![screenshot.png](screenshot.png)
+
+
+Alternatively, you could try launching everything from the CLI with
+something like:
+
+```bash
+$ dotnet run --project Runtime
+```
 
 ## Details
 
