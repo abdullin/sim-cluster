@@ -5,7 +5,8 @@ distributed systems inside [discrete event simulation](https://en.wikipedia.org/
 
 ## Try it out
 
-This is a .NET Core 2.0 project. You should be able to open it (e.g. in JetBrains Rider) and run.
+This is a .NET Core 2.0. You should be able to open it in a IDE
+(e.g. in JetBrains Rider) and run `SimMach` project.
 
 The output should be something like this:
 
