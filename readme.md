@@ -1,7 +1,20 @@
 # sim-cluster
 
-This is my current work-in-progress on running event-driven
-distributed systems inside [discrete event simulation](https://en.wikipedia.org/wiki/Discrete_event_simulation).
+This is work-in-progress on running event-driven distributed systems
+inside
+[discrete event simulation](https://en.wikipedia.org/wiki/Discrete_event_simulation). 
+
+The purpose of this simulation research - to be able to run a
+distributed application inside a deterministic simulation while
+bombarding it with various faults that are hard to reproduce in the
+real world (but are still disruptive for the production systems).
+
+This project builds upon the
+[SymAsync](https://github.com/abdullin/simasync) project, extending it
+with more features (including a simplified networking stack).
+
+If you want to discuss this project, don't hesitate to write me an
+email at `rinat@abdullin`.
 
 ## Try it out
 
@@ -11,7 +24,6 @@ This is a .NET Core 2.0. You should be able to open it in a IDE
 The output should be something like this:
 
 ![screenshot.png](screenshot.png)
-
 
 Alternatively, you could try launching everything from the CLI with
 something like:
